@@ -32,11 +32,12 @@ def parse_arguments():
 	parser.add_argument('--teacher', default='human', type=str, help='teacher name')
 	parser.add_argument('--student', default='', type=str, help='student name')
 	parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
-	parser.add_argument('--iter', default=0, type=int, help='manual seed')
+	parser.add_argument('--iter', default=0, type=int, help='run')
 
 	parser.add_argument('--temperature', default=1, type=int,  help='student temperature')
 	parser.add_argument('--lambda_', default=0.5, type=float,  help='weighted average')
-	parser.add_argument('--gamma_', default=0.5, type=float,  help='weighted average')
+	parser.add_argument('--gamma_', default=0.0, type=float,  help='weighted average')
+    parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
 
 	parser.add_argument('--epochs', default=500, type=int,  help='number of total epochs to run')
 	parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
@@ -57,7 +58,7 @@ if __name__ == "__main__":
 	student_dir = '{}/teacher_{}'
 	args = parse_arguments()
 	print(args)
-    log_path = '{}/{}/{}/training_log.log'.format(args.master_outdir, args.master_architecture, args.teacher)
+    log_path = '{}/{}/{}/seed_{}/training_log.log'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
     save_path = '{}/{}/{}/seed_{}'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
 
     if not os.path.exists():
@@ -85,6 +86,7 @@ if __name__ == "__main__":
 				'trial_id': args.trial_id,
 				'batch_size': args.batch_size,
 				'teacher': args.teacher,
+                'disil_fn': args.distil_fn,
 				'lambda_': args.lambda_,
 				'temperature': args.temperature,
 				'gamma_': args.gamma_
@@ -97,8 +99,8 @@ if __name__ == "__main__":
 
 	train_loader, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
 
-	student_name = 'student_{}_temperature_{}_lambda_{}_gamma_{}_trial_{}_best.pth.tar'.format(args.student, 
-								args.temperature, args.lambda_, args.gamma_, trial_id)
+	student_name = 'student_{0}_distil_fn_{1}_temperature_{2}_lambda_{3}_gamma_{4}_iter_{5}_best.pth.tar'.format(args.student, 
+								args.distil_fn, args.temperature, args.lambda_, args.gamma_, args.iter)
 	train_config['outfile'] = '{}/{}'.format(save_path, student_name)
 
 	print("---------- Training Student -------")
@@ -108,11 +110,11 @@ if __name__ == "__main__":
 
 	best_valacc, best_valloss = student_trainer.train()
 
-	print("Best student accuacy for teacher {} student {}, trial = {}, gamma= {}, lambda= {}, temperature= {} is {}".format(args.teacher,
-		args.student, args.trial_id, args.gamma_, args.lambda_, args.temperature, best_valacc))
+	print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp {3}, lambda {4}, gamma {5}, iter {6} is {7}".format(args.teacher,
+		args.student, args.iter, args.temperature, args.lambda_, args.gamma_, args.iter, best_valacc))
 
-	logline = "{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, \n".format(args.teacher,
-		      args.student, args.trial_id, args.gamma_, args.lambda_, args.temperature, best_valacc, best_valloss)
+	logline = "teacher {0}, student {1}, distil_fn {2}, temp {3}, lambda {4}, gamma {5}, iter {6},valacc {7}, valloss {8}, \n".format(args.teacher,
+		      args.student, args.distil_fn, args.temperature, args.lambda_, args.gamma_, args.iter, best_valacc, best_valloss)
 				
 	logs.write(logline)
 	logs.flush()
