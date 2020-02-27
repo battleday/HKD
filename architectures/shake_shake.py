@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from shake_function import get_alpha_beta, shake_function
+from architectures.shake_function import get_alpha_beta, shake_function
 
 
 def initialize_weights(module):

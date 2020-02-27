@@ -1,9 +1,10 @@
-from resnet_cifar import *
-from plain_cnn_cifar import *
-from resnext import *
-from shake_shake import *
-from resnet import *
-from wrn import *
+from architectures.resnet_cifar import *
+from architectures.plain_cnn_cifar import *
+from architectures.resnext import *
+from architectures.shake_shake import *
+from architectures.resnet import *
+from architectures.wrn import *
+
 def is_resnet(name):
 	"""
 	Simply checks if name represents a resnet, by convention, all resnet names start with 'resnet'
@@ -81,16 +82,3 @@ def create_cnn_model(name, dataset="cifar100", use_cuda=False):
 		model = model.cuda()
 		
 	return model
-
-# if __name__ == "__main__":
-# 	dataset = 'cifar100'
-# 	print('planes')
-# 	for p in [2, 4, 6, 8, 10]:
-# 		plane_name = "plane" + str(p)
-# 		print(create_cnn_model(plane_name, dataset))
-#
-# 	print('-'*20)
-# 	print("resnets")
-# 	for r in [8, 14, 20, 26, 32, 44, 56, 110]:
-# 		resnet_name = "resnet" + str(r)
-# 		print(create_cnn_model(resnet_name, dataset))

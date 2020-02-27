@@ -1,6 +1,3 @@
-
-++ b/data_loader.py
-@ -0,0 +1,160 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -11,13 +8,13 @@ import numpy as np
 from PIL import Image
 class cifar_softhard(Dataset):
 
-	def __init__(self,train=True):
+	def __init__(self, data_dir, train=True):
 		normalize=transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
 
 		if train:
-			file1 = 'train10k_images.npy'
-			file2= 'train10k_labels.npy'
-			file3= 'cifar10h-probs.npy'
+			file1 = '{}/train10k_images.npy'.format(data_dir)
+			file2= '{}/train10k_labels.npy'.format(data_dir)
+			file3= '{}/cifar10h-probs.npy'.format(data_dir)
 			self.transform = transforms.Compose([transforms.ToPILImage(),
 			transforms.RandomCrop(32, padding=4),
 			transforms.RandomHorizontalFlip(),
@@ -25,9 +22,9 @@ class cifar_softhard(Dataset):
 			normalize
 		])
 		else:
-			file1 = 'test50k_images.npy'
-			file2 ='test50k_labels.npy'
-			file3= 'test50k_labels.npy'
+			file1 = '{}/test50k_images.npy'.format(data_dir)
+			file2 ='{}/test50k_labels.npy'.format(data_dir)
+			file3= '{}/test50k_labels.npy'.format(data_dir)
 			self.transform=transforms.Compose([transforms.ToPILImage(),
 				transforms.ToTensor(),
 				normalize])
@@ -36,45 +33,20 @@ class cifar_softhard(Dataset):
 		self.labels_hard= np.load(file2)
 		self.labels_soft= np.load(file3)
 
-	#	files = os.listdir(self.images_root)
-		
-		
-#        self.filenames = [f[:-4] for f in files]
-#        self.filenames=sorted(files)
-
-	#	self.input_transform = input_transform
-	#	self.target_transform = target_transform
-
 	def __getitem__(self, index):
-		
-		# print(self.images_root[index].shape)
-		# self.images_root[index] = (self.images_root[index] + 1) * 127.5
 		
 		image = self.transform(torch.from_numpy((self.images_root[index]*255).astype(np.uint8)))
 		hard= self.labels_hard[index]
 		soft = self.labels_soft[index]
 		
-		#print('before>>>',filename)
-		
-		#print('after>>>',filename)
-		
-	   
 
-# 		with open(image_path(self.images_root, filename), 'rb') as f:
-# 			image =
-		
 		return image, hard, soft
 
 	def __len__(self):
 		return len(self.images_root)
 
 
-
-
-
-
-
-def get_cifar(num_classes=100, dataset_dir='./data', batch_size=1, crop=False):
+def get_cifar(num_classes=100, dataset_dir='data', batch_size=1, crop=False):
 	"""
 	:param num_classes: 10 for cifar10, 100 for cifar100
 	:param dataset_dir: location of datasets, default is a directory named 'data'
@@ -99,30 +71,11 @@ def get_cifar(num_classes=100, dataset_dir='./data', batch_size=1, crop=False):
 	else:
 		train_transform = simple_transform
 	
-	# if num_classes == 100:
-	# 	trainset = torchvision.datasets.CIFAR100(root=dataset_dir, train=True,
-	# 											 download=True, transform=train_transform)
-		
-	# 	testset = torchvision.datasets.CIFAR100(root=dataset_dir, train=False,
-	# 											download=True, transform=simple_transform)
-	# else:
-	# 	trainset = torchvision.datasets.CIFAR10(root=dataset_dir, train=True,
-	# 											 download=True, transform=simplest_transform)
-		
-	# 	testset = torchvision.datasets.CIFAR10(root=dataset_dir, train=False,
-	# 											download=True, transform=simplest_transform)
-		
-	# trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, num_workers=NUM_WORKERS,
-	# 										  pin_memory=True, shuffle=False)
-	# testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, num_workers=NUM_WORKERS,
-	# 										 pin_memory=True, shuffle=False)
-
 	
-	trainloader = torch.utils.data.DataLoader(cifar_softhard(train=True), batch_size=batch_size,
+	trainloader = torch.utils.data.DataLoader(cifar_softhard(dataset_dir, train=True), batch_size=batch_size,
 											  pin_memory=True,shuffle=True, num_workers=NUM_WORKERS) # Creating dataloader
 
-	#testset = torchvision.datasets.CIFAR10(root='./cifar10', train=False, download=True, transform=apply_transform)
-	testloader = torch.utils.data.DataLoader(cifar_softhard(train=False), batch_size=batch_size,pin_memory=True,
+	testloader = torch.utils.data.DataLoader(cifar_softhard(dataset_dir, train=False), batch_size=batch_size,pin_memory=True,
 											 shuffle=False, num_workers=NUM_WORKERS) # Creating dataloader
 	
 	print('No. of samples in train set: '+str(len(trainloader.dataset)))

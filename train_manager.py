@@ -12,6 +12,7 @@ import numpy as np
 
 def index_probabilities(teacherProbs, batch_idx):
 	# is this right?
+	print('likely wrong datatype here... long int?')
 	return teacherProbs[batch_idx.to(self.device).long()]
 
 def prepare_teacher_targets(teacherProbs, batch_idx):
@@ -23,12 +24,13 @@ class TrainManager(object):
 	def __init__(self, student, teacherProbs=None, train_loader=None, 
 		test_loader=None, train_config={}):
 		self.config = train_config
+		self.device = self.config['device']
 		self.student = student
 		self.teacherProbs = teacherProbs
 		self.train_loader = train_loader
 		self.test_loader = test_loader
 		
-		self.optimizer = optim.SGD(self.learner.parameters(),
+		self.optimizer = optim.SGD(self.student.parameters(),
 								   lr=self.config['learning_rate'],
 								   momentum=self.config['momentum'],
 								   weight_decay=self.config['weight_decay'])
@@ -64,11 +66,12 @@ class TrainManager(object):
 				total_loss = 0
 				total_loss_SL = 0
 				total_loss_KD = 0
-
-                self.optimizer.zero_grad()
+				
+				self.optimizer.zero_grad()
 
 				data = data.to(self.device).float()
-				target_hard = target_hard.to(self.device) #.long() # may need this to survive
+				target_hard = target_hard.to(self.device).long() # may need this to survive
+				target_soft = target_soft.to(self.device).float() # may need this to survive
 				output = self.student(data)
 
 				# data loss
@@ -77,10 +80,10 @@ class TrainManager(object):
 				# Knowledge Distillation loss
 				# return teacher targets by indexing into teacherProbs with batch_idx
 				if self.teacherProbs:
-                    teacher_outputs = prepare_teacher_targets(self.teacherProbs, 
+					teacher_outputs = prepare_teacher_targets(self.teacherProbs, 
 														  batch_idx)
 				else:
-				    teacher_outputs = target_soft
+					teacher_outputs = target_soft
 				loss_KD = distillation_criterion(F.log_softmax(output / T, dim=1),
 											     F.softmax(teacher_outputs / T, dim=1))
 
@@ -103,7 +106,7 @@ class TrainManager(object):
 			if val_acc > best_acc:
 				best_acc = val_acc
 				best_loss = val_loss
-				self.save(epoch, name = self.config['outfile'], training_losses, validation_losses)
+				self.save(epoch, self.config['outfile'], training_losses, validation_losses)
 
 
 			#training and validation losses aren't used, yet

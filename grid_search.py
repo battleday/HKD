@@ -11,4 +11,5 @@ for seed in seeds:
             for t in temperatures:
     	        for l in lambdas:
                     for g in gammas:
-                        os.system("sbatch -N 1 -n 1 -t 3 -o /tigress/smondal/softlabels_teacheronly_resnet110_number_%s.out --gres=gpu:1 --wrap 'python -u train.py --epochs 200 --teacher resnet110  --learning-rate 0.1 --cuda 1 --dataset cifar10  --trial_id %s'"%(run_no,run_no))
+                        trial_id="seed_${seed}_run_${run}_lr_${lr}_t_${t}_lam_${l}_gam_${g}"
+                        os.system("sbatch -N 1 -n 1 -t 300 -o /scratch/gpfs/ruairidh/HKD/human_resnet110_id_${trial_id}.out --gres=gpu:1 --wrap 'python -u train_student.py --epochs 200 --teacher human --student resnet110 --learning-rate ${lr} --temperature ${t} --lambda_ ${l} --gamma_ ${g} --cuda 1 --dataset cifar10  --iter ${run} --manual_seed ${seed} --trial_id ${run} --master_outdir /scratch/gpfs/ruairidh/HKD'")

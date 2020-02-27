@@ -6,7 +6,8 @@ import torch
 import argparse
 from data_loader import get_cifar
 from find_best_teacher import load_best_model
-
+from train_manager import TrainManager
+from model_factory import create_cnn_model, is_resnet
 def str2bool(v):
 	if v.lower() in ('yes', 'true', 't', 'y', '1'):
 		return True
@@ -28,16 +29,16 @@ def load_checkpoint(model, checkpoint_path):
 def parse_arguments():
 	parser = argparse.ArgumentParser(description='Training KD Teachers Code')
 	parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
-	parser.add_argument('--master_architecture', default='', type=str, help='next level down from model dump')
+	parser.add_argument('--master_architecture', default='resnet', type=str, help='next level down from model dump')
 	parser.add_argument('--teacher', default='human', type=str, help='teacher name')
-	parser.add_argument('--student', default='', type=str, help='student name')
+	parser.add_argument('--student', default='resnet8', type=str, help='student name')
 	parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
 	parser.add_argument('--iter', default=0, type=int, help='run')
 
 	parser.add_argument('--temperature', default=1, type=int,  help='student temperature')
 	parser.add_argument('--lambda_', default=0.5, type=float,  help='weighted average')
 	parser.add_argument('--gamma_', default=0.0, type=float,  help='weighted average')
-    parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
+	parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
 
 	parser.add_argument('--epochs', default=500, type=int,  help='number of total epochs to run')
 	parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
@@ -58,12 +59,13 @@ if __name__ == "__main__":
 	student_dir = '{}/teacher_{}'
 	args = parse_arguments()
 	print(args)
-    log_path = '{}/{}/{}/seed_{}/training_log.log'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
-    save_path = '{}/{}/{}/seed_{}'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
+	save_path = '{}/{}/{}/{}'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
+	log_path = '{}/training_log.log'.format(save_path)
+	print('saving model run in {} \n'.format(save_path))
 
-    if not os.path.exists():
-    	print('making new dirs')
-    	os.makedirs(save_path)
+	if not os.path.exists(save_path):
+    		print('making new dirs')
+    		os.makedirs(save_path)
 
 	logs = open(log_path, 'a')
 
@@ -86,7 +88,7 @@ if __name__ == "__main__":
 				'trial_id': args.trial_id,
 				'batch_size': args.batch_size,
 				'teacher': args.teacher,
-                'disil_fn': args.distil_fn,
+				'distil_fn': args.distil_fn,
 				'lambda_': args.lambda_,
 				'temperature': args.temperature,
 				'gamma_': args.gamma_
@@ -120,182 +122,3 @@ if __name__ == "__main__":
 	logs.flush()
 	
 	os.fsync(logs.fileno())
- No newline at end of file
-iff --git a/wrn.py b/wrn.py
-ew file mode 100644
-ndex 0000000..90b501d
--- /dev/null
-++ b/wrn.py
-@ -0,0 +1,172 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-
-def initialize_weights(module):
-    if isinstance(module, nn.Conv2d):
-        nn.init.kaiming_normal_(module.weight.data, mode='fan_in')
-    elif isinstance(module, nn.BatchNorm2d):
-        module.weight.data.uniform_()
-        module.bias.data.zero_()
-    elif isinstance(module, nn.Linear):
-        module.bias.data.zero_()
-
-
-class BasicBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride, drop_rate):
-        super(BasicBlock, self).__init__()
-
-        self.drop_rate = drop_rate
-
-        self._preactivate_both = (in_channels != out_channels)
-
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            stride=stride,  # downsample with first conv
-            padding=1,
-            bias=False)
-
-        self.bn2 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False)
-
-        self.shortcut = nn.Sequential()
-        if in_channels != out_channels:
-            self.shortcut.add_module(
-                'conv',
-                nn.Conv2d(
-                    in_channels,
-                    out_channels,
-                    kernel_size=1,
-                    stride=stride,  # downsample
-                    padding=0,
-                    bias=False))
-
-    def forward(self, x):
-        if self._preactivate_both:
-            x = F.relu(
-                self.bn1(x), inplace=True)  # shortcut after preactivation
-            y = self.conv1(x)
-        else:
-            y = F.relu(
-                self.bn1(x),
-                inplace=True)  # preactivation only for residual path
-            y = self.conv1(y)
-        if self.drop_rate > 0:
-            y = F.dropout(
-                y, p=self.drop_rate, training=self.training, inplace=False)
-
-        y = F.relu(self.bn2(y), inplace=True)
-        y = self.conv2(y)
-        y += self.shortcut(x)
-        return y
-
-
-class Network3(nn.Module):
-    def __init__(self):
-        super(Network3, self).__init__()
-
-        input_shape = (1,3,32,32)
-        n_classes = 10
-
-        base_channels = 16
-        widening_factor = 10
-        drop_rate = 0
-        depth = 28
-
-        block = BasicBlock
-        n_blocks_per_stage = (depth - 4) // 6
-        assert n_blocks_per_stage * 6 + 4 == depth
-
-        n_channels = [
-            base_channels,
-            base_channels * widening_factor,
-            base_channels * 2 * widening_factor,
-            base_channels * 4 * widening_factor
-        ]
-
-        self.conv = nn.Conv2d(
-            input_shape[1],
-            n_channels[0],
-            kernel_size=3,
-            stride=1,
-            padding=1,
-            bias=False)
-
-        self.stage1 = self._make_stage(
-            n_channels[0],
-            n_channels[1],
-            n_blocks_per_stage,
-            block,
-            stride=1,
-            drop_rate=drop_rate)
-        self.stage2 = self._make_stage(
-            n_channels[1],
-            n_channels[2],
-            n_blocks_per_stage,
-            block,
-            stride=2,
-            drop_rate=drop_rate)
-        self.stage3 = self._make_stage(
-            n_channels[2],
-            n_channels[3],
-            n_blocks_per_stage,
-            block,
-            stride=2,
-            drop_rate=drop_rate)
-        self.bn = nn.BatchNorm2d(n_channels[3])
-
-        # compute conv feature size
-        with torch.no_grad():
-            self.feature_size = self._forward_conv(
-                torch.zeros(*input_shape)).view(-1).shape[0]
-
-        self.fc = nn.Linear(self.feature_size, n_classes)
-
-        # initialize weights
-        self.apply(initialize_weights)
-
-    def _make_stage(self, in_channels, out_channels, n_blocks, block, stride,
-                    drop_rate):
-        stage = nn.Sequential()
-        for index in range(n_blocks):
-            block_name = 'block{}'.format(index + 1)
-            if index == 0:
-                stage.add_module(block_name,
-                                 block(
-                                     in_channels,
-                                     out_channels,
-                                     stride=stride,
-                                     drop_rate=drop_rate))
-            else:
-                stage.add_module(block_name,
-                                 block(
-                                     out_channels,
-                                     out_channels,
-                                     stride=1,
-                                     drop_rate=drop_rate))
-        return stage
-
-    def _forward_conv(self, x):
-        x = self.conv(x)
-        x = self.stage1(x)
-        x = self.stage2(x)
-        x = self.stage3(x)
-        x = F.relu(self.bn(x), inplace=True)
-        x = F.adaptive_avg_pool2d(x, output_size=1)
-        return x
-
-    def forward(self, x):
-        x = self._forward_conv(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        return x
