@@ -8,6 +8,7 @@ from data_loader import get_cifar
 from find_best_teacher import load_best_model
 from train_manager import TrainManager
 from model_factory import create_cnn_model, is_resnet
+
 def str2bool(v):
 	if v.lower() in ('yes', 'true', 't', 'y', '1'):
 		return True
@@ -49,7 +50,7 @@ def parse_arguments():
 	
 	parser.add_argument('--cuda', default=False, type=str2bool, help='whether or not use cuda(train on GPU)')
 	parser.add_argument('--dataset-dir', default='./data', type=str,  help='dataset directory')
-	parser.add_argument('--trial_id', default=1, type=int,  help='id number')
+	parser.add_argument('--trial_id', default='', type=str,  help='id string')
 	
 	args = parser.parse_args()
 	return args
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 	student_dir = '{}/teacher_{}'
 	args = parse_arguments()
 	print(args)
-	save_path = '{}/{}/{}/{}'.format(args.master_outdir, args.master_architecture, args.teacher, args.manual_seed)
+	save_path = '{}/{}/{}'.format(args.master_outdir, args.master_architecture, args.teacher)
 	log_path = '{}/training_log.log'.format(save_path)
 	print('saving model run in {} \n'.format(save_path))
 
@@ -97,8 +98,9 @@ if __name__ == "__main__":
 	student_model = create_cnn_model(args.student, dataset, use_cuda=args.cuda)
 
 	# below will be dict with name and probs
+	print('args.teacher: {0}'.format(args.teacher))
 	teacher_model = load_best_model(args.teacher, args.master_outdir)
-
+	print('returned teacher model is: {0}'.format(teacher_model))
 	train_loader, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
 
 	student_name = 'student_{0}_distil_fn_{1}_temperature_{2}_lambda_{3}_gamma_{4}_iter_{5}_best.pth.tar'.format(args.student, 
