@@ -33,7 +33,7 @@ fi
 echo 'entering python script'
 
 python train_student.py --epochs 200 --teacher ${teacher} --student ${student} \
---learning-rate ${lr} --temperature ${t} --lambda_ ${l} --gamma ${g} --iter ${run} \
+--learning-rate ${lr} --temperature ${t} --lambda_ ${l} --gamma_ ${g} --iter ${run} \
 --dataset cifar10 --cuda 1 --manual_seed ${seed} --trial_id ${jobname} \
 --master_outdir ${SDIR}
 /

@@ -24,6 +24,7 @@ class TrainManager(object):
 	def __init__(self, student, teacherProbs=None, train_loader=None, 
 		test_loader=None, train_config={}):
 		self.config = train_config
+		self.name = train_config['trial_id']
 		self.device = self.config['device']
 		self.student = student
 		self.teacherProbs = teacherProbs

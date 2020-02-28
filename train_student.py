@@ -100,7 +100,7 @@ if __name__ == "__main__":
 	# below will be dict with name and probs
 	print('args.teacher: {0}'.format(args.teacher))
 	teacher_model = load_best_model(args.teacher, args.master_outdir)
-	print('returned teacher model is: {0}'.format(teacher_model))
+#	print('returned teacher model is: {0}'.format(teacher_model))
 	train_loader, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
 
 	student_name = 'student_{0}_distil_fn_{1}_temperature_{2}_lambda_{3}_gamma_{4}_iter_{5}_best.pth.tar'.format(args.student, 
