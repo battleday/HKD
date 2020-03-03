@@ -54,7 +54,12 @@ class TrainManager(object):
 		training_losses=[]
 
 		criterion = nn.CrossEntropyLoss()
-		distillation_criterion = nn.KLDivLoss()
+		if train_config['distil_fn'] == 'CE:
+			print('CE model')
+			distillation_criterion = nn.CrossEntropyLoss()
+		else:
+			print('{} model'.format(train_config['distil_fn']))
+			distillation_criterion = nn.KLDivLoss()
 
 		print('Starting student training, no = {} >>>>>>>>>>>>>'.format(trial_id))
 

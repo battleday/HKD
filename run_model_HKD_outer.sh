@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 echo 'outer tuning script'
-time=200
+time=300
 lrs='0.1'
 ts='0.5 1 5 10 15 20 25'
 ls='0.0 0.2 0.4 0.6 0.8 1.0'
 gammas='1'
 seeds='0'
-runs='0'
-distils='KD CE'
+runs='0 1 2 3 4 5 6 7 8 9'
+distils='KD'
 teachers='human'
-students='resnet110'
+students='shake26'
 
 for teacher in $teachers
     do
