@@ -2,12 +2,12 @@
 echo 'outer tuning script'
 time=300
 lrs='0.1'
-ts='0.5 1 5 10 15 20 25'
-ls='0.0 0.2 0.4 0.6 0.8 1.0'
+ts='1 5 10 15'
+ls='0.0 0.2 0.4'
 gammas='1'
 seeds='0'
-runs='0 1 2 3 4 5 6 7 8 9'
-distils='KD'
+runs='0 1 2 3 4'
+distils='KD CE'
 teachers='human'
 students='shake26'
 
@@ -21,21 +21,22 @@ for teacher in $teachers
             do
             echo "seed: ${seed}"
         
-            for distil in $distils
+            for lr in $lrs
                 do
-                echo "distil: ${distil}"
-                for lr in $lrs
+                echo "lr: ${lr}"
+
+                for t in $ts
                     do
-                    echo "lr: ${lr}"
-            
-                    for run in $runs
+                    for l in $ls
                         do
-                        echo "run: ${run}"
-            
-                        for t in $ts
+                        for distil in $distils
                             do
-                            for l in $ls
-                                do
+                             echo "distil: ${distil}"
+            
+                             for run in $runs
+                                 do
+                                 echo "run: ${run}"
+            
                                 for g in $gammas
                                     do
                                     echo "${t}_${l}_${g}"
