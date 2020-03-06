@@ -45,27 +45,57 @@ The remaining parameters are related to the optimization process and data storag
  ## Files
  
  In this repo, the following files are used:
- 1. train_manager. 
+ 1. `train_manager.py` 
  
  This module contains all the training code. It takes a student and teacher outputs, learning and optimization parameters, and directory pointers, and then trains the student and saves accordingly. The main object class is `TrainManager`, which takes as input a `student` pytorch model, a numpy array of 10000 * 10 probabilities derived from a teacher network for all images in the validation subset of CIFAR10, `teacherProbs`, `train_loader` and `test_loader`, derived from the data loader, and `train_config`. This last file should contain the following keys:
  
  'epochs'---number of epochs to train for;
+ 
  'learning_rate'---of student;
+ 
  'momentum';
+ 
  'weight_decay';
+ 
  'device';
+ 
  'trial_id'---currently used to give unique string specifier;
+ 
  'batch_size';
+ 
  'distil_fn';
+ 
  'lambda_';
+ 
  'gamma_';
+ 
  'temperature_h';
+ 
  'temperature_t';
+ 
  'outfile'.
  
  When called, the `train_manager.py` `TrainManager` `train` method will train the student and keep track of the training and validationi losses, and model state at the highest-scoring validation accuracy. After training, it will call the `save` method to dump the losses and best model state to 'outfile'.
                                 
- 2. train_student. The main runfile for training a student. Takes a number of command-line arguments, all specified at top of file. From this, it creates all directory structure, initializes the seed for torch, loads student model and teacherProbs, and creates the final save path and logging files.
+ 2. `train_student.py`
+ 
+ The main runfile for training a student. Takes a number of command-line arguments, all specified at top of file. From this,    it creates all directory structure, initializes the seed for torch, loads student model and teacherProbs, and creates the  final save path and logging files.
+ 
+ 3. `find_best_teacher.py`
+ 
+ Module to find best teacher within a specified subgroup.
+ 
+ 4. `print_model_scores.py`
+ 
+ If given argument of master directory, will print results of all models within it.
+ 
+ 5. `run_model_HKD.sh`
+ Intuitively, this script plays the role of the command-line user on the remote server.
+ This should be called within an sbatch command via `run_model_HKD_outer.sh`. Loads correct modules (anaconda3) and environments (torch-env: see here (https://pytorch.org/get-started/locally/; via conda)) on server, and creates correct master working directory. Takes a series of bash arguments from `run_model_HKD_outer.sh`, and sets some others manually. Calls `train_student.py` with these arguments. The only thing that should be changed is the path for SDIR.
+ 
+ 6. `run_model_HDK_outer.sh`
+ This controls launching the sbatch jobs for different model parameters. Currently it is just a series of nested for loops in a bash script, but there is no reason one could not use a python script wrapping an os command instead.
+ 
 ---
 This repo is based on the following two pytorch repos for CIFAR10 image classification models:
 
