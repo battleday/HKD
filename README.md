@@ -96,7 +96,26 @@ The remaining parameters are related to the optimization process and data storag
  6. `run_model_HDK_outer.sh`
  This controls launching the sbatch jobs for different model parameters. Currently it is just a series of nested for loops in a bash script, but there is no reason one could not use a python script wrapping an os command instead.
  
+ 7. `data_loader.py`
+ The data loader module, originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/data_loader.py. Currently requires more commenting and documentation, and the CINIC-10 and ImageNetFar datasets added.
+ 
+ 8. `model_factory.py`
+ Originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/model_factory.py.
+ 
 ---
+## Directories
+
+1. Data
+Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train10k_images.npy, test50k_images.npy,		train10k_labels.npy). Email to receive these.
+
+2. Architectures
+Contains architectures from TAKD repo, and provides the backend to `model_factory.py`.
+
+---
+## Plan
+
+---
+
 This repo is based on the following two pytorch repos for CIFAR10 image classification models:
 
 Teacher-Assistant Knowledge Distillation
