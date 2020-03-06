@@ -8,7 +8,7 @@ bash run_model_HKD_outer.sh
 
 Run the following commands to allocate yourself to a gpu on tigergpu and test functions:
 salloc -t 00:05:00 --gres=gpu:1
-sbatch --time=5 --job-name=test --output=test  --export=epochs=2,arch=shake_shake,seed=0,teacher=human,student=shake_shake26,distil=KD,lr=0.1,t=1,l=0.5,g=1,run=0,jobname=test run_model_HKD.sh
+sbatch --time=5 --job-name=test --output=test  --export=epochs=2,arch=shake_shake,seed=0,teacher=human,student=shake26,distil=KD,lr=0.1,t=1,l=0.5,g=1,run=0,jobname=test run_model_HKD.sh
                      
 ---
 
@@ -39,7 +39,7 @@ The student model is still trained using the cross-entropy loss between its outp
  
  The second loss term, L2, is itself composed of a convex combination of a compression signal from the teacher, L2t, and a data signal from the human labels, L2h:
  
- L<sub>2</sub> = (1-&gamma;)L<sub>2S</sub> + &gamma;L<sub>2D</sub>.
+ L<sub>2</sub> = (1-&gamma;)L<sub>2t</sub> + &gamma;L<sub>2h</sub>.
  
  Each of these terms is as follows:
  

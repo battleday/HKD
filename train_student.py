@@ -15,7 +15,6 @@ def str2bool(v):
 	else:
 		return False
 	
-
 def load_checkpoint(model, checkpoint_path):
 	"""
 	Loads weights from checkpoint
@@ -34,7 +33,7 @@ def parse_arguments():
 	parser.add_argument('--teacher', default='human', type=str, help='teacher name')
 	parser.add_argument('--student', default='resnet8', type=str, help='student name')
 	parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
-	parser.add_argument('--iter', default=0, type=int, help='run')
+	parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
 
 	parser.add_argument('--temperature_t', default=1, type=int,  help='student teacher temperature')
 	parser.add_argument('--temperature_h', default=1, type=int,  help='student human temperature')
@@ -57,10 +56,13 @@ def parse_arguments():
 	return args
 
 if __name__ == "__main__":
-	# Parsing arguments and prepare settings for training
-	student_dir = '{}/teacher_{}'
+	# Parse arguments 
 	args = parse_arguments()
 	print(args)
+
+	# prepare paths and log
+	# student results will be saved under their teacher's superdirectory
+	student_dir = '{}/teacher_{}'
 	save_path = '{}/{}/{}'.format(args.master_outdir, args.master_architecture, args.teacher)
 	log_path = '{}/training_log.log'.format(save_path)
 	print('saving model run in {} \n'.format(save_path))
@@ -71,16 +73,21 @@ if __name__ == "__main__":
 
 	logs = open(log_path, 'a')
 
+	# set seed
 	torch.manual_seed(args.manual_seed)
 	torch.cuda.manual_seed(args.manual_seed)
-	trial_id = os.environ.get('NNI_TRIAL_JOB_ID')
+	
+	# prepare dataset-related hyperparameters
 	dataset = args.dataset
-
 	if dataset == 'cifar10':
 		num_classes = 10 
 	else:
 		print('cifar10 not loaded!')
 
+	# dataloaders for training paradigm
+	train_loader, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
+
+	# prepare train_config, to be passed into TrainManager class
 	train_config = {
 				'epochs': args.epochs,
 				'learning_rate': args.learning_rate,
@@ -96,17 +103,17 @@ if __name__ == "__main__":
 				'gamma_': args.gamma_
 			}
 
+	# create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
 	student_model = create_cnn_model(args.student, dataset, use_cuda=args.cuda)
 
-	# below will be dict with name and probs
-	print('args.teacher: {0}'.format(args.teacher))
-	teacher_model = load_best_model(args.teacher, args.master_outdir)
-#	print('returned teacher model is: {0}'.format(teacher_model))
-	train_loader, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
+	# below will be dict with teacher name and probs for CIFAR10 validation subset
+	teacher_model = load_best_model(args.teacher, args.master_outdir, optional_arguments = None)
 
-	student_name = 'student_{0}_distil_fn_{1}_temperature_{2}_lambda_{3}_gamma_{4}_iter_{5}_best.pth.tar'.format(args.student, 
-								args.distil_fn, args.temperature, args.lambda_, args.gamma_, args.iter)
+    # unique identifier
+	student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(args.student, 
+								args.distil_fn, args.temperature_h, args.temperature_t, args.lambda_, args.gamma_, args.iter)
 
+    # where to dump final model
 	train_config['outfile'] = '{}/{}'.format(save_path, student_name)
 
 	print("---------- Training Student -------")

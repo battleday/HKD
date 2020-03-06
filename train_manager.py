@@ -56,11 +56,13 @@ class TrainManager(object):
 		self.train_loader = train_loader
 		self.test_loader = test_loader
 		
+		# set up optimizer
 		self.optimizer = optim.SGD(self.student.parameters(),
 								   lr=self.config['learning_rate'],
 								   momentum=self.config['momentum'],
 								   weight_decay=self.config['weight_decay'])
 
+		# set up scheduler
 		self.scheduler = ReduceLROnPlateau(self.optimizer, 'max', factor = 0.9, patience = 5, 
 			verbose = True)
 			
@@ -68,16 +70,18 @@ class TrainManager(object):
 		epochs = self.config['epochs']
 		trial_id = self.config['trial_id']
 		lambda_ = self.config['lambda_']
-		T = self.config['temperature']
+		T_h = self.config['temperature_h']
+		T_t = self.config['temperature_t']
+		gamma_ = self.config['gamma_']
 
-		iteration = 0
-		best_acc = 0
-
-
+		# to record losses afteer each training epoch; will be saved
 		validation_losses=[]
 		training_losses=[]
-
+		best_acc = 0
+		# L1 loss criterion
 		criterion = nn.CrossEntropyLoss()
+
+		# L2 loss criterion
 		if self.config['distil_fn'] == 'CE':
 			print('CE model')
 			distillation_criterion = nn.CrossEntropyLoss()
@@ -88,17 +92,20 @@ class TrainManager(object):
 		print('Starting student training, no = {} >>>>>>>>>>>>>'.format(trial_id))
 
 		for epoch in range(epochs):
+			# initialize torch model
 			self.student.train()
+
+			# loop over batches in training set (CIFAR10 validation set)
 			for batch_idx, (data, target_hard, target_soft) in enumerate(self.train_loader):
-				
-				iteration += 1
 
 				total_loss = 0
 				total_loss_SL = 0
 				total_loss_KD = 0
 				
+				# reset gradients
 				self.optimizer.zero_grad()
 
+                # organize and type data
 				data = data.to(self.device).float()
 				target_hard = target_hard.to(self.device).long() # may need this to survive
 				target_soft = target_soft.to(self.device).float() # may need this to survive
@@ -113,33 +120,45 @@ class TrainManager(object):
 					teacher_outputs = index_probabilities(self.teacherProbs, 
 														  batch_idx)
 				else:
+					# should only be the case if learning from human labels, where teacherProbs is None
 					teacher_outputs = target_soft
-				loss_KD = distillation_criterion(F.log_softmax(output / T, dim=1),
-											     F.softmax(teacher_outputs / T, dim=1))
 
+				# i.e., if only using human labels for loss
+				if gamma_ == 1:
+				    loss_KD = T_h * T_h * distillation_criterion(F.log_softmax(output / T_h, dim=1),
+											     F.softmax(teacher_outputs / T_h, dim=1))
+				# if using both human and teacher
+				else:
+					# convex combination of teacher and human label loss
+					loss_KD = T_t * T_t * (1-gamma_)*distillation_criterion(F.log_softmax(output / T_t, dim=1),
+											     F.softmax(teacher_outputs / T_t, dim=1)) + 
+								T_h * T_h * gamma_ * distillation_criterion(F.log_softmax(output / T_h, dim=1),
+											     F.softmax(target_soft / T_h, dim=1))
 				# total loss
-				loss = (1 - lambda_) * loss_SL + lambda_ * T * T * loss_KD
+				loss = (1 - lambda_) * loss_SL + lambda_ * loss_KD
 				total_loss += loss
 				total_loss_SL += loss_SL
 				total_loss_KD += loss_KD
 				loss.backward()
 				self.optimizer.step()
 
-			print("training loss epoch>>",total_loss)
+			# group training losses
 			training_losses.append((total_loss, total_loss_SL, total_loss_KD))
 			
-			print("epoch {}/{} done".format(epoch, epochs))
-			
+			# calculate validation losses
 			val_acc, val_loss = self.validate(step=epoch)
 			validation_losses.append((val_acc, val_loss))
 
+			print("epoch {}/{} done \n".format(epoch, epochs))			
+			print("training loss epoch>>",total_loss)
+			print("validation accuracy and loss of epoch>>",val_acc, val_loss)
+			
+			# only save if best epoch so far: if so, overwrite model
 			if val_acc > best_acc:
 				best_acc = val_acc
 				best_loss = val_loss
 				self.save(epoch, self.config['outfile'], training_losses, validation_losses)
 
-
-			#training and validation losses aren't used, yet
 		return best_acc, best_loss
 	
 	def validate(self, step=0):
@@ -168,6 +187,7 @@ class TrainManager(object):
 	
 	def save(self, epoch, name, training_losses, validation_losses):
 		trial_id = self.config['trial_id']
+		"""will save model and parameters in path <name>"""
 		torch.save({
 				'model_state_dict': self.student.state_dict(),
 				'optimizer_state_dict': self.optimizer.state_dict(),

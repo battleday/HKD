@@ -21,7 +21,7 @@ def load_torch_results(model_path):
     model = torch.load(model_path, map_location=map_location)
     return model
 
-def load_best_model(teacher_name, master_path):
+def load_best_model(teacher_name, master_path, optional_args=None):
 	"""If given a path, this function will return the output probabilities of 
     the best teacher under that path as a numpy array.
 
