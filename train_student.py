@@ -36,7 +36,8 @@ def parse_arguments():
 	parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
 	parser.add_argument('--iter', default=0, type=int, help='run')
 
-	parser.add_argument('--temperature', default=1, type=int,  help='student temperature')
+	parser.add_argument('--temperature_t', default=1, type=int,  help='student teacher temperature')
+	parser.add_argument('--temperature_h', default=1, type=int,  help='student human temperature')
 	parser.add_argument('--lambda_', default=0.5, type=float,  help='weighted average')
 	parser.add_argument('--gamma_', default=0.0, type=float,  help='weighted average')
 	parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
@@ -88,10 +89,10 @@ if __name__ == "__main__":
 				'device': 'cuda' if args.cuda else 'cpu',
 				'trial_id': args.trial_id,
 				'batch_size': args.batch_size,
-				'teacher': args.teacher,
 				'distil_fn': args.distil_fn,
 				'lambda_': args.lambda_,
-				'temperature': args.temperature,
+				'temperature_h': args.temperature_h,
+				'temperature_t': args.temperature_t,
 				'gamma_': args.gamma_
 			}
 
@@ -105,6 +106,7 @@ if __name__ == "__main__":
 
 	student_name = 'student_{0}_distil_fn_{1}_temperature_{2}_lambda_{3}_gamma_{4}_iter_{5}_best.pth.tar'.format(args.student, 
 								args.distil_fn, args.temperature, args.lambda_, args.gamma_, args.iter)
+
 	train_config['outfile'] = '{}/{}'.format(save_path, student_name)
 
 	print("---------- Training Student -------")

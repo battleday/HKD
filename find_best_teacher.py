@@ -51,10 +51,14 @@ def average_mode(mode, dir, max_iter=9):
     if len(accs) == 0:
         av_acc = None
         av_loss = None
+        max_ac = None
+        argmax_ac = None
     else:
         av_acc = np.mean(accs)
+        max_ac = np.max(accs)
+        argmax_ac = np.argmax(accs)
         av_loss = np.mean(losses)
-    return {'val_acc': av_acc, 'val_loss': av_loss}
+    return {'val_acc': av_acc, 'val_loss': av_loss, 'max acc': max_ac, 'argmax_ac': argmax_ac}
 
 def print_averages(result_dict):
     for k in result_dict.keys():
@@ -62,9 +66,11 @@ def print_averages(result_dict):
 
 def compile_model_summary(dir):
     modes = return_modes(dir)
+    modes.sort()
     averages = {}
     for mode in modes:
         averages[mode] = average_mode(mode, dir, max_iter=9)
+        print('\n {}, {}'.format(mode, averages[mode]))
     print_averages(averages)
     return averages
 

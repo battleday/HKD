@@ -10,7 +10,8 @@ runs='0 1 2 3 4'
 distils='KD CE'
 teachers='human'
 students='shake26'
-
+arch='shake_shake'
+epochs='200'
 for teacher in $teachers
     do
     echo "teacher: ${teacher}"
@@ -43,7 +44,7 @@ for teacher in $teachers
                                     jobname="seed_${seed}_teacher_${teacher}_student_${student}_distil_${distil}_lr_${lr}_t_${t}_l_${l}_g_${g}_run_${run}"
                                     logfile="${jobname}"
                                     echo "running job ${jobname}"
-                                    sbatch --time=${time} --job-name=${jobname} --output=${logfile}  --export=seed=$seed,teacher=$teacher,student=$student,distil=$distil,lr=$lr,t=$t,l=$l,g=$g,run=$run,jobname=$jobname run_model_HKD.sh
+                                    sbatch --time=${time} --job-name=${jobname} --output=${logfile}  --export=epochs=$epochs,arch=$arch,seed=$seed,teacher=$teacher,student=$student,distil=$distil,lr=$lr,t=$t,l=$l,g=$g,run=$run,jobname=$jobname run_model_HKD.sh
                     
                                     done
                                 done
