@@ -116,7 +116,7 @@ Contains architectures from TAKD repo, and provides the backend to `model_factor
 
 Follow each of these lines to completion, selecting teacher with best validation accuracy at each stage.
 
-![Comparison pathways](./Pathways.png)
+![Comparison pathways](https://github.com/battleday/HKD/blob/master/Pathways.png| width=50)
 
 ---
 
