@@ -114,6 +114,10 @@ Contains architectures from TAKD repo, and provides the backend to `model_factor
 ---
 ## Plan
 
+Follow each of these lines to completion, selecting teacher with best validation accuracy at each stage.
+
+![Comparison pathways](./Pathways.png)
+
 ---
 
 This repo is based on the following two pytorch repos for CIFAR10 image classification models:
