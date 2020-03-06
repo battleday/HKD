@@ -1,5 +1,4 @@
 import os
-# import nni
 import torch
 import argparse
 import torch.nn as nn
@@ -10,17 +9,43 @@ from model_factory import is_resnet
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import numpy as np
 
+
+### This script contains the main object class for training and optimization: TrainManager.
+#-----------------------------------
+# Helper functions
 def index_probabilities(teacherProbs, batch_idx):
-	# is this right?
-	print('likely wrong datatype here... long int?')
-	return teacherProbs[batch_idx.to(self.device).long()]
+	"""This function should batch the teacher probabilities for the L2 loss
+	using the torch backend.
 
-def prepare_teacher_targets(teacherProbs, batch_idx):
-	# index batch
-	probsBatch = index_probabilities(teacherProbs, batch_idx)
-	return probsBatch
+	Inputs
+	teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
+	batch_idx: torch object: indices of images in batch being trained.
 
+	Outputs
+	teacherProbsBatched: torch object, teacher model output probabilities for batch
+	"""
+	print('Not tested yet.')
+	teacherProbsBatched = teacherProbs[batch_idx.to(self.device).long()]
+	return teacherProbsBatched
+
+#-----------------------------------
+# Main object class
 class TrainManager(object):
+	"""TrainManager class. Will create environment to train and save a student network.
+
+    Inputs (input through train_student.py)
+    student: torch model, to be trained
+    teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
+    train_loader: ? type, CIFAR10 validation subset, already batched. From dataloader module
+    test_loader: ? type, CIFAR10 training subset, already batched. From dataloader module
+    train_config: dictionary, with parameters for training
+
+    Methods
+    train: train student model
+    validate: take current model and calculate validation accuracy and loss
+    save: dump model and results after training in dictionary form using pytorch
+    adjust_learning_rate: adjusts learning rate
+	"""
 	def __init__(self, student, teacherProbs=None, train_loader=None, 
 		test_loader=None, train_config={}):
 		self.config = train_config
@@ -39,7 +64,6 @@ class TrainManager(object):
 		self.scheduler = ReduceLROnPlateau(self.optimizer, 'max', factor = 0.9, patience = 5, 
 			verbose = True)
 			
-
 	def train(self):
 		epochs = self.config['epochs']
 		trial_id = self.config['trial_id']
@@ -86,7 +110,7 @@ class TrainManager(object):
 				# Knowledge Distillation loss
 				# return teacher targets by indexing into teacherProbs with batch_idx
 				if self.teacherProbs:
-					teacher_outputs = prepare_teacher_targets(self.teacherProbs, 
+					teacher_outputs = index_probabilities(self.teacherProbs, 
 														  batch_idx)
 				else:
 					teacher_outputs = target_soft
