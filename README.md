@@ -7,7 +7,9 @@ Run the following command to launch a gridsearch:
 bash run_model_HKD_outer.sh
 
 Run the following commands to allocate yourself to a gpu on tigergpu and test functions:
+
 salloc -t 00:05:00 --gres=gpu:1
+
 sbatch --time=5 --job-name=test --output=test  --export=epochs=2,arch=shake_shake,seed=0,teacher=human,student=shake26,distil=KD,lr=0.1,t=1,l=0.5,g=1,run=0,jobname=test run_model_HKD.sh
                      
 ---
