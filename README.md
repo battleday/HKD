@@ -124,9 +124,11 @@ The remaining parameters are related to the optimization process and data storag
 ## Directories
 
 1. Data
+
 Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train10k_images.npy, test50k_images.npy,		train10k_labels.npy). Email to receive these.
 
 2. Architectures
+
 Contains architectures from TAKD repo, and provides the backend to `model_factory.py`.
 
 ---
