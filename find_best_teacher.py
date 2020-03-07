@@ -22,7 +22,7 @@ def load_torch_results(model_path):
     return model
 
 def load_best_model(teacher_name, master_path, optional_args=None):
-	"""If given a path, this function will return the output probabilities of 
+    """If given a path, this function will return the output probabilities of 
     the best teacher under that path as a numpy array.
 
     Inputs
@@ -37,10 +37,10 @@ def load_best_model(teacher_name, master_path, optional_args=None):
     
     #If the teacher is human (i.e., if pretraining), return None (dataloader handles 
     #human soft labels).
-	if teacher_name == 'human':
-		print('human teacher')
-		teacherProbs = {'name': 'human', 'probs': None}
-	else:
+    if teacher_name == 'human':
+        print('human teacher')
+        teacherProbs = {'name': 'human', 'probs': None}
+    else:
         print('teacher is: {0}'.format(teacher_name))
 
         #make sure best model is up to date at time of load
