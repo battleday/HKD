@@ -6,18 +6,18 @@
 echo 'outer tuning script'
 
 # parameters to search over, given as strings
-time=300
+time=350
 lrs='0.1'
-ts='1 5 10 15'
-ls='0.0 0.2 0.4'
+t_ts='1' # 5 10 15'
+t_hs='1 5 10 20' # 5 10 15'
+ls='0.2 0.4 0.6' # 0.2 0.4'
 gammas='1'
 seeds='0'
-runs='0 1 2 3 4'
+runs='0 1 2 3 4 5 6 7 8 9'
 distils='KD CE'
-teachers='human'
+teachers='human baseline'
 students='shake26'
-arch='shake_shake'
-epochs='200'
+epochs='300'
 
 # grid search
 for teacher in $teachers
@@ -34,31 +34,33 @@ for teacher in $teachers
                 do
                 echo "lr: ${lr}"
 
-                for t in $ts
+                for t_t in $t_ts
                     do
-                    for l in $ls
+                    for t_h in $t_hs
                         do
-                        for distil in $distils
+                        for l in $ls
                             do
-                             echo "distil: ${distil}"
+                            for distil in $distils
+                                do
+                                 echo "distil: ${distil}"
             
-                             for run in $runs
-                                 do
-                                 echo "run: ${run}"
+                                 for run in $runs
+                                     do
+                                     echo "run: ${run}"
             
-                                for g in $gammas
-                                    do
-                                    echo "${t}_${l}_${g}"
-                                    # unique job name based on grid search parameters. Used as trial ID and in SLURM summary
-                                    jobname="seed_${seed}_teacher_${teacher}_student_${student}_distil_${distil}_lr_${lr}_t_${t}_l_${l}_g_${g}_run_${run}"
+                                    for g in $gammas
+                                        do
+                                        echo "${t}_${l}_${g}"
+                                        # unique job name based on grid search parameters. Used as trial ID and in SLURM summary
+                                        jobname="seed_${seed}_teacher_${teacher}_student_${student}_distil_${distil}_lr_${lr}_t_t_${t_t}_t_h_${t_h}_l_${l}_g_${g}_run_${run}"
 
-                                    # a log file for each job will be dropped in main directory
-                                    logfile="${jobname}"
-                                    echo "running job ${jobname}"
+                                        # a log file for each job will be dropped in main directory
+                                        logfile="${jobname}"
+                                        echo "running job ${jobname}"
 
-                                    # run sbatch job, givin sbatch parameters and exporting python parameters to run_model_HKD.sh
-                                    sbatch --time=${time} --job-name=${jobname} --output=${logfile}  --export=epochs=$epochs,arch=$arch,seed=$seed,teacher=$teacher,student=$student,distil=$distil,lr=$lr,t=$t,l=$l,g=$g,run=$run,jobname=$jobname run_model_HKD.sh
-                    
+                                        # run sbatch job, givin sbatch parameters and exporting python parameters to run_model_HKD.sh
+                                        sbatch --time=${time} --job-name=${jobname} --output=${logfile}  --export=epochs=$epochs,arch=$arch,seed=$seed,teacher=$teacher,student=$student,distil=$distil,lr=$lr,t_t=$t_t,t_h=$t_h,l=$l,g=$g,run=$run,jobname=$jobname run_model_HKD.sh
+                                        done
                                     done
                                 done
                             done

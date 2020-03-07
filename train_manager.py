@@ -35,7 +35,7 @@ class TrainManager(object):
 
     Inputs (input through train_student.py)
     student: torch model, to be trained
-    teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
+    teacher: dict, containing name (str) and probs: numpy array(10000 x 10); model's output probs for validation set.
     train_loader: ? type, CIFAR10 validation subset, already batched. From dataloader module
     test_loader: ? type, CIFAR10 training subset, already batched. From dataloader module
     train_config: dictionary, with parameters for training
@@ -46,13 +46,14 @@ class TrainManager(object):
     save: dump model and results after training in dictionary form using pytorch
     adjust_learning_rate: adjusts learning rate
     """
-    def __init__(self, student, teacherProbs=None, train_loader=None, 
+    def __init__(self, student, teacher=None, train_loader=None, 
         test_loader=None, train_config={}):
         self.config = train_config
         self.name = train_config['trial_id']
         self.device = self.config['device']
         self.student = student
-        self.teacherProbs = teacherProbs
+        self.teacherProbs = teacher['probs']
+        self.teacher_name = teacher['name']
         self.train_loader = train_loader
         self.test_loader = test_loader
         
@@ -116,23 +117,30 @@ class TrainManager(object):
                 
                 # Knowledge Distillation loss
                 # return teacher targets by indexing into teacherProbs with batch_idx
-                if self.teacherProbs:
-                    teacher_outputs = index_probabilities(self.teacherProbs, 
-                                                          batch_idx)
-                else:
+                if self.teacher_name == 'human':
                     # should only be the case if learning from human labels, where teacherProbs is None
                     teacher_outputs = target_soft
-
+                elif self.teacher_name == 'baseline':
+                    teacher_outputs = None
+                else:
+                    teacher_outputs = index_probabilities(self.teacherProbs, 
+                                                          batch_idx)
+                # if only training baseline teacher, use loss_SL (L1 loss) only
+                if self.teacher_name == 'baseline':
+                    loss_KD = loss_SL
                 # i.e., if only using human labels for loss
-                if gamma_ == 1:
+                elif gamma_ == 1.0:
                     loss_KD = T_h * T_h * distillation_criterion(F.log_softmax(output / T_h, dim=1),
                                                  F.softmax(teacher_outputs / T_h, dim=1))
+                # i.e., if only using teacher labels for loss
+                elif gamma_ == 0.0:
+                    loss_KD = T_t * T_t * distillation_criterion(F.log_softmax(output / T_t, dim=1),
+                                                 F.softmax(teacher_outputs / T_t, dim=1))
                 # if using both human and teacher
                 else:
                     # convex combination of teacher and human label loss
                     loss_KD = T_t * T_t * (1-gamma_)*distillation_criterion(F.log_softmax(output / T_t, dim=1),
-                                                 F.softmax(teacher_outputs / T_t, dim=1)) + 
-                                T_h * T_h * gamma_ * distillation_criterion(F.log_softmax(output / T_h, dim=1),
+                                                 F.softmax(teacher_outputs / T_t, dim=1)) + T_h * T_h * gamma_ * distillation_criterion(F.log_softmax(output / T_h, dim=1),
                                                  F.softmax(target_soft / T_h, dim=1))
                 # total loss
                 loss = (1 - lambda_) * loss_SL + lambda_ * loss_KD

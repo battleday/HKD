@@ -32,8 +32,8 @@ echo 'entering python script'
 
 # call main python script, with arguments passed in through run_model_HKD_outer.sh
 python train_student.py --epochs ${epochs} --teacher ${teacher} --student ${student} \
---learning-rate ${lr} --temperature ${t} --lambda_ ${l} --gamma_ ${g} --iter ${run} \
+--learning-rate ${lr} --temperature_t ${t_t} --temperature_h ${t_h} --lambda_ ${l} --gamma_ ${g} --iter ${run} \
 --dataset cifar10 --cuda 1 --manual_seed ${seed} --trial_id ${jobname} \
---master_outdir ${SDIR} --master_architecture ${arch}
+--master_outdir ${SDIR} 
 
 echo 'inner done'

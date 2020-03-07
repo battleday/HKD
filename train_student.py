@@ -29,7 +29,6 @@ def load_checkpoint(model, checkpoint_path):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
     parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
-    parser.add_argument('--master_architecture', default='resnet', type=str, help='next level down from model dump')
     parser.add_argument('--teacher', default='human', type=str, help='teacher name')
     parser.add_argument('--student', default='resnet8', type=str, help='student name')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
@@ -62,8 +61,7 @@ if __name__ == "__main__":
 
     # prepare paths and log
     # student results will be saved under their teacher's superdirectory
-    student_dir = '{}/teacher_{}'
-    save_path = '{}/{}/{}'.format(args.master_outdir, args.master_architecture, args.teacher)
+    save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
     log_path = '{}/training_log.log'.format(save_path)
     print('saving model run in {} \n'.format(save_path))
 
@@ -107,7 +105,7 @@ if __name__ == "__main__":
     student_model = create_cnn_model(args.student, dataset, use_cuda=args.cuda)
 
     # below will be dict with teacher name and probs for CIFAR10 validation subset
-    teacher_model = load_best_model(args.teacher, args.master_outdir, optional_arguments = None)
+    teacher_model = load_best_model(args.teacher, args.master_outdir, optional_args=None)
 
     # unique identifier
     student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(args.student, 
@@ -118,16 +116,16 @@ if __name__ == "__main__":
 
     print("---------- Training Student -------")
     
-    student_trainer = TrainManager(student_model, teacherProbs=teacher_model['probs'], 
+    student_trainer = TrainManager(student_model, teacher_model, 
                                    train_loader=train_loader, test_loader=test_loader, train_config=train_config)
 
     best_valacc, best_valloss = student_trainer.train()
 
-    print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp {3}, lambda {4}, gamma {5}, iter {6} is {7}".format(args.teacher,
-        args.student, args.iter, args.temperature, args.lambda_, args.gamma_, args.iter, best_valacc))
+    print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp t {3}, temp_h {4}, lambda {5}, gamma {6}, iter {7} is {8}".format(args.teacher,
+        args.student, args.iter, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc))
 
-    logline = "teacher {0}, student {1}, distil_fn {2}, temp {3}, lambda {4}, gamma {5}, iter {6},valacc {7}, valloss {8}, \n".format(args.teacher,
-              args.student, args.distil_fn, args.temperature, args.lambda_, args.gamma_, args.iter, best_valacc, best_valloss)
+    logline = "teacher {0}, student {1}, distil_fn {2}, temp t {3},  temp h {4}, lambda {5}, gamma {6}, iter {7},valacc {8}, valloss {9}, \n".format(args.teacher,
+              args.student, args.distil_fn, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc, best_valloss)
                 
     logs.write(logline)
     logs.flush()

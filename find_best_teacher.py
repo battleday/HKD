@@ -31,7 +31,7 @@ def load_best_model(teacher_name, master_path, optional_args=None):
                  with all relevant model results in it.
 
     Outputs
-    teacherProbs: a 10000 x 10 numpy array with teacher network's output probabilities
+    teacher: dict, containing name (str), and probs, a 10000 x 10 numpy array with teacher network's output probabilities
                 in order for validation subset of CIFAR10
     """
     
@@ -39,7 +39,10 @@ def load_best_model(teacher_name, master_path, optional_args=None):
     #human soft labels).
     if teacher_name == 'human':
         print('human teacher')
-        teacherProbs = {'name': 'human', 'probs': None}
+        teacher = {'name': 'human', 'probs': None}
+    elif teacher_name == 'baseline':
+        print('human teacher')
+        teacher = {'name': 'baseline', 'probs': None}
     else:
         print('teacher is: {0}'.format(teacher_name))
 
@@ -47,8 +50,8 @@ def load_best_model(teacher_name, master_path, optional_args=None):
         new_path = save_best_model('{0}/{1}'.format(master_path, teacher_name, optional_args))
 
         #generate probabilities under that model
-        teacherProbs = load_torch_probabilities(new_path)
-    return teacherProbs
+        teacher = load_torch_probabilities(new_path)
+    return teacher
 
 def save_best_model(results_path, optional_args):
     """Will deep scan through all subsubdirectories
