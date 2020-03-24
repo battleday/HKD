@@ -34,8 +34,8 @@ def parse_arguments():
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
     parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
 
-    parser.add_argument('--temperature_t', default=1, type=int,  help='student teacher temperature')
-    parser.add_argument('--temperature_h', default=1, type=int,  help='student human temperature')
+    parser.add_argument('--temperature_t', default=1.0, type=float,  help='student teacher temperature')
+    parser.add_argument('--temperature_h', default=1.0, type=float,  help='student human temperature')
     parser.add_argument('--lambda_', default=0.5, type=float,  help='weighted average')
     parser.add_argument('--gamma_', default=0.0, type=float,  help='weighted average')
     parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     best_valacc, best_valloss = student_trainer.train()
 
     print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp t {3}, temp_h {4}, lambda {5}, gamma {6}, iter {7} is {8}".format(args.teacher,
-        args.student, args.iter, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc))
+        args.student, args.distil_fn, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc))
 
     logline = "teacher {0}, student {1}, distil_fn {2}, temp t {3},  temp h {4}, lambda {5}, gamma {6}, iter {7},valacc {8}, valloss {9}, \n".format(args.teacher,
               args.student, args.distil_fn, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc, best_valloss)

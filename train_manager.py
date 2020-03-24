@@ -4,6 +4,7 @@ import argparse
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import torch.nn.modules.loss as l
 from data_loader import get_cifar
 from model_factory import is_resnet
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -28,6 +29,27 @@ def index_probabilities(teacherProbs, batch_idx):
     teacherProbsBatched = teacherProbs[batch_idx.to(self.device).long()]
     return teacherProbsBatched
 
+def custom_ce(input, target, reduction):
+    """Important: check this is the right ordering and where log applied.
+    target: distillation target. Should be given as probabilities.
+    input: model guess. Should be given as log probabilities."""
+    output = - torch.sum( target * input, dim=1)
+    if reduction == 'mean':
+        return torch.mean(output)
+
+class CEDivLoss(l._Loss):
+    """Custom loss class for cross-entropy between soft targets and output vectors.
+
+    Input: targets (distillation targets) as probabilities, input (model outputs) as log probabilities
+    """
+    __constants__ = ['reduction']
+
+    # use mean as default reduction
+    def __init__(self, size_average=None, reduce=None, reduction='mean'):
+        super(CEDivLoss, self).__init__(size_average, reduce, reduction)
+
+    def forward(self, input, target):
+        return custom_ce(input, target, reduction=self.reduction)
 #-----------------------------------
 # Main object class
 class TrainManager(object):
@@ -85,7 +107,7 @@ class TrainManager(object):
         # L2 loss criterion
         if self.config['distil_fn'] == 'CE':
             print('CE model')
-            distillation_criterion = nn.CrossEntropyLoss()
+            distillation_criterion = CEDivLoss()
         else:
             print('{} model'.format(self.config['distil_fn']))
             distillation_criterion = nn.KLDivLoss()
