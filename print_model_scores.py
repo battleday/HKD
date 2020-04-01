@@ -1,7 +1,7 @@
 import os, sys
 import numpy as np
 import pickle
-from find_best_teacher_test import *
+from find_best_teacher import *
 script, master_dir = sys.argv
 
 

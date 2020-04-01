@@ -4,6 +4,88 @@ import numpy as np
 import torch
 import csv
 
+#train.py
+teacher_model = create_cnn_model(args.teacher, dataset, use_cuda=args.cuda)
+		if args.teacher_checkpoint:
+			print("---------- Loading Teacher -------")
+			teacher_model = load_checkpoint(teacher_model, args.teacher_checkpoint)
+
+def load_checkpoint(model, checkpoint_path):
+	"""
+	Loads weights from checkpoint
+	:param model: a pytorch nn model
+	:param str checkpoint_path: address/path of a file
+	:return: pytorch nn student with weights loaded from checkpoint
+	"""
+	model_ckp = torch.load(checkpoint_path)
+	model.load_state_dict(model_ckp['model_state_dict'])
+	return model
+parser.add_argument('--teacher-checkpoint', default='', type=str, help='optinal pretrained checkpoint for teacher')
+
+
+if self.have_teacher:
+			self.teacher.eval()
+			self.teacher.train(mode=False)
+			
+		self.train_loader = train_loader
+		self.test_loader = test_loader
+
+for batch_idx, (data, target) in enumerate(self.train_loader):
+				iteration += 1
+				data = data.to(self.device)
+				target = target.to(self.device)
+				self.optimizer.zero_grad()
+				output = self.student(data)
+				# Standard Learning Loss ( Classification Loss)
+				loss_SL = criterion(output, target) 
+				loss = loss_SL
+				
+				if self.have_teacher:
+					teacher_outputs = self.teacher(data)
+
+teacher_name = '{}_{}_best.pth.tar'.format(args.teacher, trial_id)
+teacher_model = load_checkpoint(teacher_model, os.path.join('./', teacher_name))
+
+# Model Factory
+def create_cnn_model(name, dataset="cifar100", use_cuda=False):
+	"""
+	Create a student for training, given student name and dataset
+	:param name: name of the student. e.g., resnet110, resnet32, plane2, plane10, ...
+	:param dataset: the dataset which is used to determine last layer's output size. Options are cifar10 and cifar100.
+	:return: a pytorch student for neural network
+	"""
+	num_classes = 100 if dataset == 'cifar100' else 10
+	model = None
+	if is_resnet(name):
+		resnet_size = name[6:]
+		resnet_model = resnet_book.get(resnet_size)(num_classes=num_classes)
+		model = resnet_model
+		
+	else:
+		plane_size = name[5:]
+		model_spec = plane_cifar10_book.get(plane_size) if num_classes == 10 else plane_cifar100_book.get(plane_size)
+		plane_model = ConvNetMaker(model_spec)
+		model = plane_model
+
+	# copy to cuda if activated
+	if use_cuda:
+		model = model.cuda()
+		
+	return model
+
+
+def is_resnet(name):
+	"""
+	Simply checks if name represents a resnet, by convention, all resnet names start with 'resnet'
+	:param name:
+	:return:
+	"""
+	name = name.lower()
+	return name.startswith('resnet')
+
+from resnet_cifar import *
+from plain_cnn_cifar import *
+
 
 def load_torch_results(model_path):
     """Given the path to a torch model, load and return it.
@@ -61,12 +143,14 @@ def save_best_model(results_path, optional_args):
     Will copy and rename these models, and return the new path.
 
     Inputs
-    Results path: str, master directory to scan under
+    results_path: str, master directory to scan under
 
+    Outputs
+    model_path
     Needs to be implemented
     """
     print("not implemented yet")
-    return ''
+    return '{0}/best_teacher.pth.tar'.format(results_path)
 
 
 def load_torch_probabilities(model_path):
@@ -87,6 +171,7 @@ def load_torch_probabilities(model_path):
     teacherProbs = validation_probabilities(model)
 
     return teacherProbs
+
 
 def validation_probabilities(model):
     """Will take saved model, and compute the model probabilities for the 

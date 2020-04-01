@@ -2,6 +2,7 @@ import os
 import pickle
 import numpy as np
 import torch
+import csv
 
 
 def load_torch_results(model_path):
@@ -115,7 +116,7 @@ def return_modes(results_path):
     files_raw = os.listdir(results_path)
 
     # only record those with the right extension
-    files = [x for x in file if '.pth' in x]
+    files = [x for x in files_raw if '.pth' in x]
     comparisons = []
     for file in files:
         # ignore run number / iter
@@ -157,6 +158,7 @@ def average_mode(mode, result_dir, max_iter=9):
         result_path = '{0}/{1}_iter_{2}_best.pth.tar'.format(result_dir, mode, iter)
         try:
             working_results = load_torch_results(result_path)
+            working_results = return_validation_stats(working_results)
         except Exception as e:
             print('Result path invalid or not torch model. Dir: {0}; Mode: {1}; error: {2}'.format(mode, e, result_dir))
             continue
@@ -192,13 +194,48 @@ def compile_model_summary(results_path):
 
     # gives a sorted list of different model types
     modes = return_modes(results_path)
-    print("modes are: {0}".format([x + '\n' for x in modes]))
+    #print("modes are: {0}".format([x + '\n' for x in modes]))
     averages = {}
     for mode in modes:
         averages[mode] = average_mode(mode, results_path, max_iter=9)
-        print('\n {}, {}'.format(mode, averages[mode]))
+#        print('\n {}, {}'.format(mode, averages[mode]))
     # below function currently prints, but could instead dump to csv for better readability
     print_averages(averages)
     return averages
 
+
+def integrate_hyperparameters(model_name, result_dict):
+    """Takes a model name and splits into hyperparameters, 
+    to be saved in result dict and be returned"""
+    hyperparameters = ['distil_fn', 'temperature_h', 
+                       'temperature_t', 'lambda', 'gamma']
+    for h in hyperparameters:
+        split_string = model_name.split(h)
+        split_split_string = split_string[1].split('_')
+        result = split_split_string[1]
+        #print('{}: {}'.format(h, result))
+        result_dict[h] = result
+    return result_dict
+
+def csv_dump(average_dict, out_dir):
+    """Takes a dictionary of model averages, and dumps it to a csv"""
+    modelList = list(average_dict.keys())
+    print('modelList[:5] is {}'.format(modelList[:5]))
+    modelListSorted = sorted(modelList, key=lambda x: float(x.split('lambda_')[1].split('_')[0]))
+    print('modelListSorted[:5] is {}'.format(modelListSorted[:5]))
+    #print(modelList)
+    newAverageList = [integrate_hyperparameters(x, 
+                        average_dict[x]) for x in modelListSorted]
+    csv_columns = ['distil_fn', 'lambda', 'temperature_h', 'temperature_t', 'gamma',
+                   'val_acc', 'val_loss', 'max acc', 'best_iter', 'val_acc']
+    csv_file = '{}/average_results.csv'.format(out_dir)
+    try:
+        with open(csv_file, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in newAverageList:
+                #print(data)
+                writer.writerow(data)
+    except IOError:
+        print("I/O error")
 
