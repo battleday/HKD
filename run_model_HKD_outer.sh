@@ -8,15 +8,15 @@ echo 'outer tuning script'
 # parameters to search over, given as strings
 time=350
 lrs='0.1'
-t_ts='1.0' # 5 10 15'
-t_hs='0.5 1 5 10 20'
-ls='0.2 0.4 0.6' # 0.2 0.4'
-gammas='1'
+t_ts='0.5 1.0 5.0 10.0 20.0' # 5 10 15'
+t_hs='1.0' # 0.5 1.0 5.0 10.0 20.0'
+ls='0.0 0.2 0.4 0.6' # 0.2 0.4'
+gammas='0.0'
 seeds='0'
-runs='0 1 2 3 4 5 6 7 8 9'
-distils='CE'
-teachers='human baseline'
-students='shake26 resnet8'
+runs='0 1 2 3 4 5 6 7 8 9' # 1 2 3 4 5 6 7 8 9'
+distils='KD CE'
+teachers='human_shake26_0.2 human_shake26_0.4 human_shake26_0.6 baseline_shake26_0.2 baseline_shake26_0.4 baseline_shake26_0.6'
+students='resnet8'
 epochs='300'
 
 # grid search

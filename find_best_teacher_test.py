@@ -17,34 +17,17 @@ def load_checkpoint(model, checkpoint_path):
 	model.load_state_dict(model_ckp['model_state_dict'])
 	return model
 
-def load_torch_results(model_path):
-    """Given the path to a torch model, load and return it.
-
-    Inputs
-    model_path: str, path to torch model
-
-    Outputs
-    model: torch model, loaded from model_path
-    """
-    # check hardware
-    if torch.cuda.is_available():
-        map_location=lambda storage, loc: storage.cuda()
-    else:
-        map_location='cpu'
-    model = torch.load(model_path, map_location=map_location)
-    return model
-
-def load_teacher_model(path, teacher_name, dataset='cifar10'):
-    teacher_model = create_cnn_model(teacher_name, dataset, use_cuda=args.cuda)
+def load_teacher_model(path, teacher_arch, dataset='cifar10', cuda_option = False):
+    teacher_model = create_cnn_model(teacher_arch, dataset, use_cuda=cuda_option)
     teacher_model = load_checkpoint(teacher_model, path)
     return teacher_model
 
-def load_best_model(teacher_name, master_path, optional_args=None):
+def load_best_model(teacher, master_path, cuda_option = False):
     """If given a path, this function will return the output probabilities of 
     the best teacher under that path as a numpy array.
 
     Inputs
-    teacher_name: str, gives teacher name
+    teacher: dict {'name': , 'arch'}, gives teacher name and master architecture
     master_path: str, gives path where teacher's name will be name of a directory below
                  with all relevant model results in it.
 
@@ -55,22 +38,22 @@ def load_best_model(teacher_name, master_path, optional_args=None):
     
     #If the teacher is human (i.e., if pretraining), return None (dataloader handles 
     #human soft labels).
-    if teacher_name == 'human':
+    if teacher['name'] == 'human':
         print('human teacher')
-        teacher = {'name': 'human', 'probs': None}
-    elif teacher_name == 'baseline':
-        print('human teacher')
-        teacher = {'name': 'baseline', 'probs': None}
+        teacher_model = None
+    elif teacher['name'] == 'baseline':
+        print('no teacher')
+        teacher_model = None
     else:
-        print('teacher is: {0}'.format(teacher_name))
+        print('teacher is: {0}'.format(teacher['name']))
 
         #make sure best model is up to date at time of load
-        new_path = '{0}/{1}_{2}/best_teacher.pth.tar'.format(master_path, 
-                                                             teacher_name,
-                                                             optional_args)
+        teacher_path = '{0}/{1}_{2}/best_teacher.pth.tar'.format(master_path, 
+                                                             teacher['name'],
+                                                             teacher['args'])
 
         #generate probabilities under that model
-        teacher = load_teacher_model(new_path, teacher_name)
+        teacher = load_teacher_model(teacher_path, teacher['arch'], cuda_option)
     return teacher
 
 

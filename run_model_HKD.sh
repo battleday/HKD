@@ -27,7 +27,6 @@ if [ -d "${SDIR}" ]
     echo 'making new sdir'
     mkdir ${SDIR}
 fi
-
 echo 'entering python script'
 
 # call main python script, with arguments passed in through run_model_HKD_outer.sh

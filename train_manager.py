@@ -74,8 +74,8 @@ class TrainManager(object):
         self.name = train_config['trial_id']
         self.device = self.config['device']
         self.student = student
-        self.teacher_name = self.teacher['name']
-        self.teacher_model = self.teacher['model']
+        self.teacher_name = teacher['name']
+        self.teacher_model = teacher['model'].cuda()
         self.have_teacher = bool(self.teacher_model)
 
         # set teacher to correct mode (eval)
@@ -151,10 +151,9 @@ class TrainManager(object):
                 elif self.teacher_name == 'baseline':
                     teacher_outputs = None
                 else:
-                    # IMPORTANT: CHECK THESE ARE PROBABILITIES
-                    print("Important: check teacher outputs are probabilities")
-                    break
+                    # IMPORTANT: CHECK THESE ARE PROBABILITIES: not here, but converted below
                     teacher_outputs = self.teacher_model(data)
+
                 # if only training baseline teacher, use loss_SL (L1 loss) only
                 if self.teacher_name == 'baseline':
                     loss_KD = loss_SL

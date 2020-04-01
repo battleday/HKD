@@ -5,7 +5,7 @@ import pickle
 import torch
 import argparse
 from data_loader import get_cifar
-from find_best_teacher_test import *
+from find_best_teacher import *
 from train_manager import TrainManager
 from model_factory import create_cnn_model, is_resnet
 
@@ -30,7 +30,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
     parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
     parser.add_argument('--teacher', default='human', type=str, help='teacher name')
-    parser.add_argument('--teacher_args', default='', type=str, help='further teacher specifiers')
     parser.add_argument('--student', default='resnet8', type=str, help='student name')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
     parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
@@ -62,7 +61,18 @@ if __name__ == "__main__":
 
     # prepare paths and log
     # student results will be saved under their teacher's superdirectory
-    save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
+    teacher_details = args.teacher.split('_')
+    teacher_name = '_'.join(teacher_details[:-1])
+    if 'shake26' in args.teacher:
+        teacher_arch = 'shake26'
+    elif 'resnet8' in args.teacher:
+        teacher_arch = 'resnet8'
+    else:
+        print('something wrong with teacher input in train_student.py')
+    teacher_args = teacher_details[-1]
+
+
+    save_path = '{}/{}_{}/{}'.format(args.master_outdir, teacher_name, teacher_args, args.student)
     log_path = '{}/training_log.log'.format(save_path)
     print('saving model run in {} \n'.format(save_path))
 
@@ -106,8 +116,11 @@ if __name__ == "__main__":
     student_model = create_cnn_model(args.student, dataset, use_cuda=args.cuda)
 
     # below will be dict with teacher name and probs for CIFAR10 validation subset
-    teacher_model = load_best_model(args.teacher, args.master_outdir, optional_args=args.teacher_args)
-    teacher = {'name':arg.teacher, 'model': teacher_model}
+        
+    teacher = {'name':teacher_name, 'arch': teacher_arch, 'args': teacher_args}
+    print('teacher is: {}'.format(teacher))
+    teacher_model = load_best_model(teacher, args.master_outdir, cuda_option = args.cuda)
+    teacher['model'] = teacher_model
     # unique identifier
     student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(args.student, 
                                 args.distil_fn, args.temperature_h, args.temperature_t, args.lambda_, args.gamma_, args.iter)
@@ -122,13 +135,14 @@ if __name__ == "__main__":
 
     best_valacc, best_valloss = student_trainer.train()
 
-    print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp t {3}, temp_h {4}, lambda {5}, gamma {6}, iter {7} is {8}".format(args.teacher,
+    print("Best student accuacy for teacher {0}, student {1}, distil_fn {2}, temp t {3}, temp_h {4}, lambda {5}, gamma {6}, iter {7} is {8}".format(teacher['name'],
         args.student, args.distil_fn, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc))
 
-    logline = "teacher {0}, student {1}, distil_fn {2}, temp t {3},  temp h {4}, lambda {5}, gamma {6}, iter {7},valacc {8}, valloss {9}, \n".format(args.teacher,
+
+    logline = "teacher {0}, student {1}, distil_fn {2}, temp t {3},  temp h {4}, lambda {5}, gamma {6}, iter {7},valacc {8}, valloss {9}, \n".format(teacher['name'],
               args.student, args.distil_fn, args.temperature_t, args.temperature_h, args.lambda_, args.gamma_, args.iter, best_valacc, best_valloss)
-                
+
     logs.write(logline)
     logs.flush()
-    
+
     os.fsync(logs.fileno())

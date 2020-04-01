@@ -3,31 +3,31 @@ import pickle
 import numpy as np
 import torch
 import csv
+from model_factory import *
 
 
-def load_torch_results(model_path):
-    """Given the path to a torch model, load and return it.
+def load_checkpoint(model, checkpoint_path):
+	"""
+	Loads weights from checkpoint
+	:param model: a pytorch nn model
+	:param str checkpoint_path: address/path of a file
+	:return: pytorch nn student with weights loaded from checkpoint
+	"""
+	model_ckp = torch.load(checkpoint_path)
+	model.load_state_dict(model_ckp['model_state_dict'])
+	return model
 
-    Inputs
-    model_path: str, path to torch model
+def load_teacher_model(path, teacher_arch, dataset='cifar10', cuda_option = False):
+    teacher_model = create_cnn_model(teacher_arch, dataset, use_cuda=cuda_option)
+    teacher_model = load_checkpoint(teacher_model, path)
+    return teacher_model
 
-    Outputs
-    model: torch model, loaded from model_path
-    """
-    # check hardware
-    if torch.cuda.is_available():
-        map_location=lambda storage, loc: storage.cuda()
-    else:
-        map_location='cpu'
-    model = torch.load(model_path, map_location=map_location)
-    return model
-
-def load_best_model(teacher_name, master_path, optional_args=None):
+def load_best_model(teacher, master_path, cuda_option = False):
     """If given a path, this function will return the output probabilities of 
     the best teacher under that path as a numpy array.
 
     Inputs
-    teacher_name: str, gives teacher name
+    teacher: dict {'name': , 'arch'}, gives teacher name and master architecture
     master_path: str, gives path where teacher's name will be name of a directory below
                  with all relevant model results in it.
 
@@ -38,67 +38,23 @@ def load_best_model(teacher_name, master_path, optional_args=None):
     
     #If the teacher is human (i.e., if pretraining), return None (dataloader handles 
     #human soft labels).
-    if teacher_name == 'human':
+    if teacher['name'] == 'human':
         print('human teacher')
-        teacher = {'name': 'human', 'probs': None}
-    elif teacher_name == 'baseline':
-        print('human teacher')
-        teacher = {'name': 'baseline', 'probs': None}
+        teacher_model = None
+    elif teacher['name'] == 'baseline':
+        print('no teacher')
+        teacher_model = None
     else:
-        print('teacher is: {0}'.format(teacher_name))
-
+        print('teacher is: {0}'.format(teacher['name']))
         #make sure best model is up to date at time of load
-        new_path = save_best_model('{0}/{1}'.format(master_path, teacher_name, optional_args))
+        teacher_path = '{0}/{1}_{2}/best_teacher.pth.tar'.format(master_path, 
+                                                             teacher['name'].replace('_','/'),
+                                                             teacher['args'])
 
         #generate probabilities under that model
-        teacher = load_torch_probabilities(new_path)
+        teacher = load_teacher_model(teacher_path, teacher['arch'], cuda_option)
     return teacher
 
-def save_best_model(results_path, optional_args):
-    """Will deep scan through all subsubdirectories
-    looking for best performing model given a path and some options.
-
-    Will copy and rename these models, and return the new path.
-
-    Inputs
-    Results path: str, master directory to scan under
-
-    Needs to be implemented
-    """
-    print("not implemented yet")
-    return ''
-
-
-def load_torch_probabilities(model_path):
-    """Given a path, will load torch model return its output probabilities for 
-    the validation subset of CIFAR10
-
-    Inputs
-    model_path: str, path to model
-
-    Outputs
-    teacherProbs: numpy array (10000 x 10); model's output probs for validation set.
-    """
-
-    # load the model
-    model = load_torch_results(model_path)
-
-    # generate model predictions
-    teacherProbs = validation_probabilities(model)
-
-    return teacherProbs
-
-def validation_probabilities(model):
-    """Will take saved model, and compute the model probabilities for the 
-    validation subset of CIFAR10
-
-    Input
-    model: torch model, which we want to compute probabilities from
-
-    Output
-    teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
-    """
-    print("Not implemented yet")
 
 def return_modes(results_path):
     """Given a directory, will return a sorted list of all combinations of 
