@@ -5,7 +5,7 @@ import pickle
 import torch
 import argparse
 from data_loader import get_cifar
-from find_best_teacher import load_best_model
+from find_best_teacher_test import *
 from train_manager import TrainManager
 from model_factory import create_cnn_model, is_resnet
 
@@ -30,6 +30,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
     parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
     parser.add_argument('--teacher', default='human', type=str, help='teacher name')
+    parser.add_argument('--teacher_args', default='', type=str, help='further teacher specifiers')
     parser.add_argument('--student', default='resnet8', type=str, help='student name')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
     parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
@@ -105,8 +106,8 @@ if __name__ == "__main__":
     student_model = create_cnn_model(args.student, dataset, use_cuda=args.cuda)
 
     # below will be dict with teacher name and probs for CIFAR10 validation subset
-    teacher_model = load_best_model(args.teacher, args.master_outdir, optional_args=None)
-
+    teacher_model = load_best_model(args.teacher, args.master_outdir, optional_args=args.teacher_args)
+    teacher = {'name':arg.teacher, 'model': teacher_model}
     # unique identifier
     student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(args.student, 
                                 args.distil_fn, args.temperature_h, args.temperature_t, args.lambda_, args.gamma_, args.iter)
@@ -116,7 +117,7 @@ if __name__ == "__main__":
 
     print("---------- Training Student -------")
     
-    student_trainer = TrainManager(student_model, teacher_model, 
+    student_trainer = TrainManager(student_model, teacher, 
                                    train_loader=train_loader, test_loader=test_loader, train_config=train_config)
 
     best_valacc, best_valloss = student_trainer.train()

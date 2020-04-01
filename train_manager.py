@@ -74,11 +74,17 @@ class TrainManager(object):
         self.name = train_config['trial_id']
         self.device = self.config['device']
         self.student = student
-        self.teacherProbs = teacher['probs']
-        self.teacher_name = teacher['name']
+        self.teacher_name = self.teacher['name']
+        self.teacher_model = self.teacher['model']
+        self.have_teacher = bool(self.teacher_model)
+
+        # set teacher to correct mode (eval)
+        if self.have_teacher:
+            self.teacher_model.eval()
+            self.teacher_model.train(mode=False)
+        
         self.train_loader = train_loader
         self.test_loader = test_loader
-        
         # set up optimizer
         self.optimizer = optim.SGD(self.student.parameters(),
                                    lr=self.config['learning_rate'],
@@ -145,8 +151,10 @@ class TrainManager(object):
                 elif self.teacher_name == 'baseline':
                     teacher_outputs = None
                 else:
-                    teacher_outputs = index_probabilities(self.teacherProbs, 
-                                                          batch_idx)
+                    # IMPORTANT: CHECK THESE ARE PROBABILITIES
+                    print("Important: check teacher outputs are probabilities")
+                    break
+                    teacher_outputs = self.teacher_model(data)
                 # if only training baseline teacher, use loss_SL (L1 loss) only
                 if self.teacher_name == 'baseline':
                     loss_KD = loss_SL

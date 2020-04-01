@@ -3,12 +3,8 @@ import pickle
 import numpy as np
 import torch
 import csv
+from model_factory import *
 
-#train.py
-teacher_model = create_cnn_model(args.teacher, dataset, use_cuda=args.cuda)
-		if args.teacher_checkpoint:
-			print("---------- Loading Teacher -------")
-			teacher_model = load_checkpoint(teacher_model, args.teacher_checkpoint)
 
 def load_checkpoint(model, checkpoint_path):
 	"""
@@ -20,72 +16,6 @@ def load_checkpoint(model, checkpoint_path):
 	model_ckp = torch.load(checkpoint_path)
 	model.load_state_dict(model_ckp['model_state_dict'])
 	return model
-parser.add_argument('--teacher-checkpoint', default='', type=str, help='optinal pretrained checkpoint for teacher')
-
-
-if self.have_teacher:
-			self.teacher.eval()
-			self.teacher.train(mode=False)
-			
-		self.train_loader = train_loader
-		self.test_loader = test_loader
-
-for batch_idx, (data, target) in enumerate(self.train_loader):
-				iteration += 1
-				data = data.to(self.device)
-				target = target.to(self.device)
-				self.optimizer.zero_grad()
-				output = self.student(data)
-				# Standard Learning Loss ( Classification Loss)
-				loss_SL = criterion(output, target) 
-				loss = loss_SL
-				
-				if self.have_teacher:
-					teacher_outputs = self.teacher(data)
-
-teacher_name = '{}_{}_best.pth.tar'.format(args.teacher, trial_id)
-teacher_model = load_checkpoint(teacher_model, os.path.join('./', teacher_name))
-
-# Model Factory
-def create_cnn_model(name, dataset="cifar100", use_cuda=False):
-	"""
-	Create a student for training, given student name and dataset
-	:param name: name of the student. e.g., resnet110, resnet32, plane2, plane10, ...
-	:param dataset: the dataset which is used to determine last layer's output size. Options are cifar10 and cifar100.
-	:return: a pytorch student for neural network
-	"""
-	num_classes = 100 if dataset == 'cifar100' else 10
-	model = None
-	if is_resnet(name):
-		resnet_size = name[6:]
-		resnet_model = resnet_book.get(resnet_size)(num_classes=num_classes)
-		model = resnet_model
-		
-	else:
-		plane_size = name[5:]
-		model_spec = plane_cifar10_book.get(plane_size) if num_classes == 10 else plane_cifar100_book.get(plane_size)
-		plane_model = ConvNetMaker(model_spec)
-		model = plane_model
-
-	# copy to cuda if activated
-	if use_cuda:
-		model = model.cuda()
-		
-	return model
-
-
-def is_resnet(name):
-	"""
-	Simply checks if name represents a resnet, by convention, all resnet names start with 'resnet'
-	:param name:
-	:return:
-	"""
-	name = name.lower()
-	return name.startswith('resnet')
-
-from resnet_cifar import *
-from plain_cnn_cifar import *
-
 
 def load_torch_results(model_path):
     """Given the path to a torch model, load and return it.
@@ -103,6 +33,11 @@ def load_torch_results(model_path):
         map_location='cpu'
     model = torch.load(model_path, map_location=map_location)
     return model
+
+def load_teacher_model(path, teacher_name, dataset='cifar10'):
+    teacher_model = create_cnn_model(teacher_name, dataset, use_cuda=args.cuda)
+    teacher_model = load_checkpoint(teacher_model, path)
+    return teacher_model
 
 def load_best_model(teacher_name, master_path, optional_args=None):
     """If given a path, this function will return the output probabilities of 
@@ -130,60 +65,14 @@ def load_best_model(teacher_name, master_path, optional_args=None):
         print('teacher is: {0}'.format(teacher_name))
 
         #make sure best model is up to date at time of load
-        new_path = save_best_model('{0}/{1}'.format(master_path, teacher_name, optional_args))
+        new_path = '{0}/{1}_{2}/best_teacher.pth.tar'.format(master_path, 
+                                                             teacher_name,
+                                                             optional_args)
 
         #generate probabilities under that model
-        teacher = load_torch_probabilities(new_path)
+        teacher = load_teacher_model(new_path, teacher_name)
     return teacher
 
-def save_best_model(results_path, optional_args):
-    """Will deep scan through all subsubdirectories
-    looking for best performing model given a path and some options.
-
-    Will copy and rename these models, and return the new path.
-
-    Inputs
-    results_path: str, master directory to scan under
-
-    Outputs
-    model_path
-    Needs to be implemented
-    """
-    print("not implemented yet")
-    return '{0}/best_teacher.pth.tar'.format(results_path)
-
-
-def load_torch_probabilities(model_path):
-    """Given a path, will load torch model return its output probabilities for 
-    the validation subset of CIFAR10
-
-    Inputs
-    model_path: str, path to model
-
-    Outputs
-    teacherProbs: numpy array (10000 x 10); model's output probs for validation set.
-    """
-
-    # load the model
-    model = load_torch_results(model_path)
-
-    # generate model predictions
-    teacherProbs = validation_probabilities(model)
-
-    return teacherProbs
-
-
-def validation_probabilities(model):
-    """Will take saved model, and compute the model probabilities for the 
-    validation subset of CIFAR10
-
-    Input
-    model: torch model, which we want to compute probabilities from
-
-    Output
-    teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
-    """
-    print("Not implemented yet")
 
 def return_modes(results_path):
     """Given a directory, will return a sorted list of all combinations of 
