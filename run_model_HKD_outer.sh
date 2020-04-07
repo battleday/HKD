@@ -8,10 +8,10 @@ echo 'outer tuning script'
 # parameters to search over, given as strings
 time=350
 lrs='0.1'
-t_ts='0.5 1.0 5.0 10.0 20.0' # 5 10 15'
-t_hs='1.0' # 0.5 1.0 5.0 10.0 20.0'
+t_ts='0.5 1.0 10.0' # 5 10 15'
+t_hs='0.5 1.0 10.0' # 0.5 1.0 5.0 10.0 20.0'
 ls='0.0 0.2 0.4 0.6' # 0.2 0.4'
-gammas='0.0'
+gammas='0.5'
 seeds='0'
 runs='0 1 2 3 4 5 6 7 8 9' # 1 2 3 4 5 6 7 8 9'
 distils='KD CE'
