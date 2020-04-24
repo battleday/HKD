@@ -6,6 +6,25 @@ import csv
 from model_factory import *
 
 
+def load_torch_results(model_path):
+    """Given the path to a torch model, load and return it.
+
+    Inputs
+    model_path: str, path to torch model
+
+    Outputs
+    model: torch model, loaded from model_path
+    """
+    # check hardware
+    if torch.cuda.is_available():
+        map_location=lambda storage, loc: storage.cuda()
+    else:
+        map_location='cpu'
+    model = torch.load(model_path, map_location=map_location)
+    return model
+
+
+
 def load_checkpoint(model, checkpoint_path):
 	"""
 	Loads weights from checkpoint
