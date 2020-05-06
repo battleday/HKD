@@ -15,7 +15,7 @@ gammas='0.5'
 seeds='0'
 runs='0 1 2 3 4 5 6 7 8 9' # 1 2 3 4 5 6 7 8 9'
 distils='KD CE'
-teachers='human_shake26_0.2 human_shake26_0.4 human_shake26_0.6 baseline_shake26_0.2 baseline_shake26_0.4 baseline_shake26_0.6'
+teachers='baseline_shake26_0.4 baseline_shake26_0.6'
 students='resnet8'
 epochs='300'
 
