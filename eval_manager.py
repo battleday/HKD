@@ -15,6 +15,28 @@ import numpy as np
 #-----------------------------------
 
 #-----------------------------------
+def custom_ce(input, target, reduction):
+    """Important: check this is the right ordering and where log applied.
+    target: distillation target. Should be given as probabilities.
+    input: model guess. Should be given as log probabilities."""
+    output = - torch.sum( target * input, dim=1)
+    if reduction == 'mean':
+        return torch.mean(output)
+
+class CEDivLoss(l._Loss):
+    """Custom loss class for cross-entropy between soft targets and output vectors.
+
+    Input: targets (distillation targets) as probabilities, input (model outputs) as log probabilities
+    """
+    __constants__ = ['reduction']
+
+    # use mean as default reduction
+    def __init__(self, size_average=None, reduce=None, reduction='mean'):
+        super(CEDivLoss, self).__init__(size_average, reduce, reduction)
+
+    def forward(self, input, target):
+        return custom_ce(input, target, reduction=self.reduction)
+
 # Main object class
 class EvalManager(object):
     """TrainManager class. Will create environment to train and save a student network.
@@ -35,7 +57,6 @@ class EvalManager(object):
     def __init__(self, student,  
         test_loader=None, eval_config={}):
         self.config = eval_config
-        self.name = self.config['trial_id']
         self.device = self.config['device']
         self.student = student
  
@@ -44,25 +65,36 @@ class EvalManager(object):
    
     def validate(self, step=0):
         self.student.eval()
-        criterion = nn.CrossEntropyLoss()
+        if self.config['validate'] == 'vector':
+            criterion = CEDivLoss()
+        else:
+            criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
             correct = 0
             total = 0
             acc = 0
             total_val_loss=0
-            for (images,labels,_) in self.test_loader:
-                images = images.to(self.device)
-                labels = labels.to(self.device)
-                outputs = self.student(images)
-                loss_val= criterion(outputs, labels) 
-                total_val_loss+=loss_val.item()
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+            if not self.config['cinic']:
+                for (images,labels,_) in self.test_loader:
+                    images = images.to(self.device)
+                    labels = labels.to(self.device).long()
+                    outputs = self.student(images)
+                    loss_val= criterion(outputs, labels) 
+                    total_val_loss+=loss_val.item()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+            else:
+                for (images,labels) in self.test_loader:
+                    images = images.to(self.device)
+                    labels = labels.to(self.device)
+                    outputs = self.student(images)
+                    loss_val= criterion(outputs, labels) 
+                    total_val_loss+=loss_val.item()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+
             acc = 100 * correct / total
-            for param_group in self.optimizer.param_groups:
-                print('Learning rate:' + str(param_group['lr']))
-            self.scheduler.step(acc)
-            print('{{"metric": "{}_val_accuracy", "value": {}}}'.format(self.name, acc))
             return acc, total_val_loss
     

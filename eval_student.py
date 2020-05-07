@@ -5,6 +5,8 @@ import pickle
 import torch
 import argparse
 from data_loader import get_cifar
+from imagenet_far_dataloader import get_imagenet_far
+from cinic_dataloader import get_cinic
 from find_best_teacher import *
 from eval_manager import EvalManager
 from model_factory import create_cnn_model, is_resnet
@@ -29,7 +31,7 @@ def load_checkpoint(model, checkpoint_path):
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Evaluating student generalization Code')
     parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
-    parser.add_argument('--student', default='resnet8', type=str, help='student name')
+    parser.add_argument('--student_name', default='resnet8', type=str, help='student name')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
 
     parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
@@ -59,26 +61,53 @@ if __name__ == "__main__":
         num_classes = 10 
     else:
         print('cifar10 not loaded!')
-        return
 
     # dataloaders for training paradigm --- do all three for generalization
-    _, test_loader = get_cifar(num_classes, batch_size=args.batch_size, crop=True)
+    _, test_loader_cifar = get_cifar(num_classes, batch_size=args.batch_size, 
+                                     crop=True)
+    _, test_loader_imagenet_far = get_imagenet_far(num_classes, 
+                                  batch_size=args.batch_size, crop=True) 
 
+    _, test_loader_cinic = get_cinic(num_classes, 
+                                  batch_size=args.batch_size, crop=True) 
     # prepare train_config, to be passed into TrainManager class
     eval_config = {
                 'device': 'cuda' if args.cuda else 'cpu',
-                'trial_id': args.trial_id,
-                'batch_size': args.batch_size
+                'batch_size': args.batch_size,
+                'validate': 'index',
+                'cinic': False
             }
-
+    student_path = '{}/{}'.format(args.master_outdir, args.student_name)
+    print('student path is: {}'.format(student_path))
     # create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
-    student_model = load_teacher_model(arg.student_path, 'resnet8', dataset, use_cuda=args.cuda)
+    student_model = load_teacher_model(student_path, 'resnet8', dataset, cuda_option=args.cuda)
 
     # where to dump final model
     
     print("---------- Evaluating Student -------")
-    student_trainer = EvalManager(student_model, test_loader=test_loader, eval_config=eval_config)
+    student_eval_cifar = EvalManager(student_model, test_loader=test_loader_cifar,
+                                     eval_config=eval_config)
 
-    best_valacc, best_valloss = student_trainer.validate()
+    best_valacc1, best_valloss1 = student_eval_cifar.validate()
 
+    print('valacc cifar: {}, vallos cifar: {}'.format(best_valacc1, best_valloss1))
+
+    eval_config['cinic'] = True
+
+    student_eval_cinic = EvalManager(student_model, test_loader=test_loader_cinic,
+                                     eval_config=eval_config)
+
+    best_valacc2, best_valloss2 = student_eval_cinic.validate()
+
+    print('valacc cinic: {}, vallos cinic: {}'.format(best_valacc2, best_valloss2))
+    eval_config['validate'] = 'vector'
+    eval_config['cinic'] = False
+
+    student_eval_imagenet = EvalManager(student_model, 
+                test_loader=test_loader_imagenet_far, eval_config=eval_config)
+
+    best_valacc3, best_valloss3 = student_eval_imagenet.validate()
+
+    print('valacc imagenet: {}, vallos imagenet: {}'.format(best_valacc3, best_valloss3))
+    
 
