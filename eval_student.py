@@ -37,7 +37,7 @@ def parse_arguments():
     parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
     parser.add_argument('--batch-size', default=128, type=int, help='batch_size')
 
-    parser.add_argument('--cuda', default=False, type=str2bool, help='whether or not use cuda(train on GPU)')
+    parser.add_argument('--cuda', default=True, type=str2bool, help='whether or not use cuda(train on GPU)')
     parser.add_argument('--dataset-dir', default='./data', type=str,  help='dataset directory')
     
     args = parser.parse_args()
@@ -100,9 +100,8 @@ if __name__ == "__main__":
     best_valacc2, best_valloss2 = student_eval_cinic.validate()
 
     print('valacc cinic: {}, vallos cinic: {}'.format(best_valacc2, best_valloss2))
-    eval_config['validate'] = 'vector'
-    eval_config['cinic'] = False
 
+    eval_config['cinic'] = False
     student_eval_imagenet = EvalManager(student_model, 
                 test_loader=test_loader_imagenet_far, eval_config=eval_config)
 

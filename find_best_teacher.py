@@ -36,7 +36,7 @@ def load_checkpoint(model, checkpoint_path):
 	model.load_state_dict(model_ckp['model_state_dict'])
 	return model
 
-def load_teacher_model(path, teacher_arch, dataset='cifar10', cuda_option = False):
+def load_teacher_model(path, teacher_arch, dataset='cifar10', cuda_option = True):
     teacher_model = create_cnn_model(teacher_arch, dataset, use_cuda=cuda_option)
     teacher_model = load_checkpoint(teacher_model, path)
     return teacher_model

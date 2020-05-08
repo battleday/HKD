@@ -58,17 +58,14 @@ class EvalManager(object):
         test_loader=None, eval_config={}):
         self.config = eval_config
         self.device = self.config['device']
-        self.student = student
+        self.student = student.cuda()
  
         self.test_loader = test_loader
         # set up optimizer
    
     def validate(self, step=0):
         self.student.eval()
-        if self.config['validate'] == 'vector':
-            criterion = CEDivLoss()
-        else:
-            criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
             correct = 0
             total = 0
