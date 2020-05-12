@@ -84,7 +84,7 @@ class EvalManager(object):
             else:
                 for (images,labels) in self.test_loader:
                     images = images.to(self.device)
-                    labels = labels.to(self.device)
+                    labels = labels.to(self.device).long()
                     outputs = self.student(images)
                     loss_val= criterion(outputs, labels) 
                     total_val_loss+=loss_val.item()

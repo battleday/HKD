@@ -5,7 +5,7 @@ import pickle
 import torch
 import argparse
 from data_loader import get_cifar
-from imagenet_far_dataloader import get_imagenet_far
+from imagenet_far_dataloader import get_imagenet
 from cinic_dataloader import get_cinic
 from find_best_teacher import *
 from eval_manager import EvalManager
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # dataloaders for training paradigm --- do all three for generalization
     _, test_loader_cifar = get_cifar(num_classes, batch_size=args.batch_size, 
                                      crop=True)
-    _, test_loader_imagenet_far = get_imagenet_far(num_classes, 
+    _, test_loader_imagenet_far = get_imagenet(num_classes, 
                                   batch_size=args.batch_size, crop=True) 
 
     _, test_loader_cinic = get_cinic(num_classes, 
@@ -78,6 +78,9 @@ if __name__ == "__main__":
                 'cinic': False
             }
     student_path = '{}/{}'.format(args.master_outdir, args.student_name)
+    if os.path.exists('{}_generalization.npy'.format(student_path[:-8])):
+       print('existing model found')
+       exit()    
     print('student path is: {}'.format(student_path))
     # create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
     student_model = load_teacher_model(student_path, 'resnet8', dataset, cuda_option=args.cuda)
@@ -101,12 +104,12 @@ if __name__ == "__main__":
 
     print('valacc cinic: {}, vallos cinic: {}'.format(best_valacc2, best_valloss2))
 
-    eval_config['cinic'] = False
     student_eval_imagenet = EvalManager(student_model, 
                 test_loader=test_loader_imagenet_far, eval_config=eval_config)
 
     best_valacc3, best_valloss3 = student_eval_imagenet.validate()
 
     print('valacc imagenet: {}, vallos imagenet: {}'.format(best_valacc3, best_valloss3))
-    
+    results = np.array([[best_valacc1, best_valacc2, best_valacc3],[best_valloss1, best_valloss2, best_valloss3]])
+    np.save('{}_generalization.npy'.format(student_path[:-8]), results)    
 
