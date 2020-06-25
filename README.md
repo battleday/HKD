@@ -46,9 +46,9 @@ The student model is still trained using the cross-entropy loss between its outp
  
  Each of these terms is as follows:
  
- L<sub>2t</sub> = T<sub>t</sub> * T<sub>t</sub> * Loss Function(p<sub>i</sub>/T<sub>t</sub>, l<sub>i</sub>/T<sub>t</sub>),
+ L<sub>2t</sub> = T<sub>t</sub> * T<sub>t</sub> * Loss Function(log(p)<sub>i</sub>/T<sub>t</sub>, log(l)<sub>i</sub>/T<sub>t</sub>),
  
- L<sub>2h</sub> = T<sub>h</sub> * T<sub>h</sub> * Loss Function(p<sub>i</sub>/T<sub>h</sub>, h<sub>i</sub>/T<sub>h</sub>),
+ L<sub>2h</sub> = T<sub>h</sub> * T<sub>h</sub> * Loss Function(log(p)<sub>i</sub>/T<sub>h</sub>, log(h)<sub>i</sub>/T<sub>h</sub>),
  
  where l<sub>i</sub> are the teacher output probabilities and h<sub>i</sub> are the human labels, and T<sub>t</sub> and T<sub>h</sub> are the compression temperature and data temperature, respectively. Typically these inputs will all be converted into probabilities using a softmax function prior to comparison in the loss function. We use either cross-entropy and relative entropy (KL divergence) as our loss functions.
  
@@ -120,6 +120,10 @@ The remaining parameters are related to the optimization process and data storag
  
  Originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/model_factory.py.
  
+ 9. `csv_dump_model_scores.py`
+ 
+ This takes a result directory, scrapes the model results, averages them across runs, and outputs a csv file in the same directory.
+ 
 ---
 ## Directories
 
@@ -131,14 +135,7 @@ Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train
 
 Contains architectures from TAKD repo, and provides the backend to `model_factory.py`.
 
----
-## Plan
 
-At the moment, the repo only handles training the initial models (i.e., with teacher as human or baseline). We need to extend it to cover searching for and loading the best teacher model for students. All of the code to do this is in `find_best_teacher.py`, partially implemented. It is called in `train_student.py`.
-
-Follow each of these lines to completion, selecting teacher with best validation accuracy at each stage.
-
-![Comparison pathways](https://github.com/battleday/HKD/blob/master/Pathways.png| width=50)
 
 ---
 
