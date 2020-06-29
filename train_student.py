@@ -45,7 +45,7 @@ def parse_arguments():
     parser.add_argument('-d', '--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
 
     parser.add_argument('-e', '--epochs', default=500, type=int,  help='number of total epochs to run')
-    parser.add_argument('-d', '--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
+    parser.add_argument('-da', '--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
     parser.add_argument('-b', '--batch-size', default=128, type=int, help='batch_size')
     parser.add_argument('-lr', '--learning-rate', default=0.1, type=float, help='initial learning rate')
     parser.add_argument('-mo', '--momentum', default=0.9, type=float,  help='SGD momentum')
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     if 'shake26' in args.teacher:
          teacher_arch = 'shake26' # we need to extract teacher architecture for setup
     else:
-        print('something wrong with teacher input in train_student.py; teacher arch not specified')
+        print('either no teacher, or something wrong with teacher input in train_student.py; teacher arch not specified')
 
     save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
     log_path = '{}/training_log.log'.format(save_path)
@@ -121,10 +121,13 @@ if __name__ == "__main__":
 
     # below will be dict with teacher name and probs for CIFAR10 validation subset
         
-    teacher = {'name':args.teacher, 'arch': teacher_arch, 'mode': arg.teacher_mode}
-    print('teacher is: {}'.format(teacher))
-    teacher_model = load_best_model(teacher, args.master_outdir, cuda_option = args.cuda)
-    teacher['model'] = teacher_model
+    if args.teacher == 'human' or args.teacher=='baseline': # if this is first model / no teacher
+        teacher = {'name': args.teacher}
+    else: # load previously trained teacher model
+        teacher = {'name':args.teacher, 'arch': teacher_arch, 'mode': arg.teacher_mode}
+        print('teacher is: {}'.format(teacher))
+        teacher_model = load_best_model(teacher, args.master_outdir, cuda_option = args.cuda)
+        teacher['model'] = teacher_model
 
     # unique identifier
     student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(

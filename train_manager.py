@@ -58,15 +58,17 @@ class TrainManager(object):
     def __init__(self, student, teacher=None, train_loader=None, 
         test_loader=None, train_config={}):
         self.config = train_config
-        self.name = train_config['trial_id']
         self.device = self.config['device']
         self.student = student
         self.teacher_name = teacher['name']
-        self.teacher_model = teacher['model'].cuda()
-        self.have_teacher = bool(self.teacher_model)
+        if self.teacher_name == 'baseline' or self.teacher_name =='human':
+            self.have_teacher = False
+        else:
+            self.have_teacher = True
 
         # set teacher to correct mode (eval)
         if self.have_teacher:
+            self.teacher_model = teacher['model'].cuda()
             self.teacher_model.eval()
             self.teacher_model.train(mode=False)
         
@@ -85,7 +87,6 @@ class TrainManager(object):
             
     def train(self):
         epochs = self.config['epochs']
-        trial_id = self.config['trial_id']
         lambda_ = self.config['lambda_']
         T_h = self.config['temperature_h']
         T_t = self.config['temperature_t']
@@ -107,7 +108,7 @@ class TrainManager(object):
             print('{} model'.format(self.config['distil_fn']))
             distillation_criterion = nn.KLDivLoss()
 
-        print('Starting student training, no = {} >>>>>>>>>>>>>'.format(trial_id))
+        print('Starting student training, put your feet up ;) >>>>>>>>>>>>>')
 
         for epoch in range(epochs):
 
@@ -130,6 +131,11 @@ class TrainManager(object):
                 data = data.to(self.device).float()
                 target_hard = target_hard.to(self.device).long() # as torch cross-entropy loss indexes
                 target_soft = target_soft.to(self.device).float() # as custom ce uses probability vectors
+                # now that we are taking log, must use (laplace) smoothing. One guess has about 0.02 probability mass
+                #print(torch.sum(target_soft, dim=1))
+                target_soft = (target_soft + 0.02) / 1.2 # as there are 10 categories)
+                #print(torch.sum(target_soft, dim=1))
+                #print(torch.isnan(target_soft))
                 output = self.student(data)
 
                 # data loss
@@ -139,10 +145,13 @@ class TrainManager(object):
                 if self.teacher_name == 'human':
                     # should only be the case if learning from human labels
                     teacher_outputs = torch.log(target_soft)
+                    #print(torch.isnan(teacher_outputs))
+                    
                     # first argument is target and should be probability. Second argument is model output
                     # and should be log probability
                     loss_KD = (T_h ** 2) * distillation_criterion(F.softmax(teacher_outputs / T_h, dim=1),
                                                  F.log_softmax(output / T_h, dim=1))
+                    print(loss_KD)
                 elif self.teacher_name == 'baseline':
                     # only the case for training the first teacher
                     teacher_outputs = None
@@ -209,11 +218,10 @@ class TrainManager(object):
             for param_group in self.optimizer.param_groups:
                 print('Learning rate:' + str(param_group['lr']))
             self.scheduler.step(acc)
-            print('{{"metric": "{}_val_accuracy", "value": {}}}'.format(self.name, acc))
+            print('{{"metric": "val_accuracy", "value": {}}}'.format(acc))
             return acc, total_val_loss
     
     def save(self, epoch, name, training_losses, validation_losses):
-        #trial_id = self.config['trial_id']
         """will save model and parameters in path <name>"""
         torch.save({
                 'model_state_dict': self.student.state_dict(),
