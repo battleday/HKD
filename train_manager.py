@@ -9,13 +9,13 @@ from data_loader import get_cifar
 from model_factory import is_resnet
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import numpy as np
-
+torch.set_printoptions(precision=10)
 
 ### This script contains the main object class for training and optimization: TrainManager.
 #-----------------------------------
 # Helper functions
 
-def custom_ce(target, input, reduction):
+def custom_ce(input, target, reduction):
     """This is a custom cross-entropy function, as pytorch indexes into a one-hot for 
     its cross-entropy loss.Expects target to be probabilities,
     input to already be log probabilities."""
@@ -26,7 +26,7 @@ def custom_ce(target, input, reduction):
 class CEDivLoss(l._Loss):
     """Custom loss class for cross-entropy between soft targets and output vectors.
     Input: targets (distillation targets) as probabilities, input (model outputs) as log probabilities
-    """
+    to mirror functional form above in custom_ce"""
     __constants__ = ['reduction']
 
     # use mean as default reduction
@@ -131,11 +131,10 @@ class TrainManager(object):
                 data = data.to(self.device).float()
                 target_hard = target_hard.to(self.device).long() # as torch cross-entropy loss indexes
                 target_soft = target_soft.to(self.device).float() # as custom ce uses probability vectors
-                # now that we are taking log, must use (laplace) smoothing. One guess has about 0.02 probability mass
-                #print(torch.sum(target_soft, dim=1))
-                target_soft = (target_soft + 0.02) / 1.2 # as there are 10 categories)
-                #print(torch.sum(target_soft, dim=1))
-                #print(torch.isnan(target_soft))
+
+                # now that we are taking log of human guesses, must use smoothing. 
+                # One guess has about 0.02 probability mass, so we can use laplace smoothing as follows:
+                target_soft = (target_soft + 0.02) / 1.2  # as there are 10 categories)
                 output = self.student(data)
 
                 # data loss
@@ -145,13 +144,11 @@ class TrainManager(object):
                 if self.teacher_name == 'human':
                     # should only be the case if learning from human labels
                     teacher_outputs = torch.log(target_soft)
-                    #print(torch.isnan(teacher_outputs))
                     
                     # first argument is target and should be probability. Second argument is model output
                     # and should be log probability
-                    loss_KD = (T_h ** 2) * distillation_criterion(F.softmax(teacher_outputs / T_h, dim=1),
-                                                 F.log_softmax(output / T_h, dim=1))
-                    print(loss_KD)
+                    loss_KD = (T_h ** 2) * distillation_criterion(F.log_softmax(output / T_h, dim=1), 
+                                                              F.softmax(teacher_outputs / T_h, dim=1))
                 elif self.teacher_name == 'baseline':
                     # only the case for training the first teacher
                     teacher_outputs = None
@@ -159,13 +156,13 @@ class TrainManager(object):
                 else:
                     # this is for training students, where teacher name will be a conjunction.
                     teacher_outputs = self.teacher_model(data) # should be logits
-                    human_outputs = torch.log(target_soft) # convert to log probabilities
+                    human_outputs = torch.log((target_soft + 0.02) / 1.2) # smooth and convert to log probabilities
 
                     # ordering as above. Gamma = 1 will give only human label. Gamma = 0 will give only teacher (classic KD)
-                    teacher_term = (1-gamma_) * (T_t **2) * distillation_criterion(F.softmax(teacher_output / T_t, dim=1),
-                                                 F.log_softmax(output / T_t, dim=1))
-                    human_term = gamma * (T_h **2) * distillation_criterion(F.softmax(human_outputs / T_h, dim=1),
-                                                 F.log_softmax(output / T_h, dim=1))
+                    teacher_term = (1-gamma_) * (T_t **2) * distillation_criterion(F.log_softmax(output / T_t, dim=1), 
+                                                                               F.softmax(teacher_output / T_t, dim=1))
+                    human_term = gamma * (T_h **2) * distillation_criterion(F.log_softmax(output / T_h, dim=1), 
+                                                                         F.softmax(human_outputs / T_h, dim=1))
 
                     loss_KD = teacher_term + human_term
 
