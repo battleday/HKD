@@ -59,7 +59,7 @@ class TrainManager(object):
         test_loader=None, train_config={}):
         self.config = train_config
         self.device = self.config['device']
-        self.student = student
+        self.student = student.cuda()
         self.teacher_name = teacher['name']
         if self.teacher_name == 'baseline' or self.teacher_name =='human':
             self.have_teacher = False
@@ -108,7 +108,7 @@ class TrainManager(object):
             print('{} model'.format(self.config['distil_fn']))
             distillation_criterion = nn.KLDivLoss()
 
-        print('Starting student training, put your feet up ;) >>>>>>>>>>>>>')
+        print('Starting student training, put your feet up :) >>>>>>>>>>>>>')
 
         for epoch in range(epochs):
 
@@ -128,9 +128,13 @@ class TrainManager(object):
                 self.optimizer.zero_grad()
 
                 # organize and type data
-                data = data.to(self.device).float()
-                target_hard = target_hard.to(self.device).long() # as torch cross-entropy loss indexes
-                target_soft = target_soft.to(self.device).float() # as custom ce uses probability vectors
+#                data = data.to(self.device).float()
+#                target_hard = target_hard.to(self.device).long() # as torch cross-entropy loss indexes
+#                target_soft = target_soft.to(self.device).float() # as custom ce uses probability vectors
+
+                data = data.float().cuda()
+                target_hard = target_hard.long().cuda() # as torch cross-entropy loss indexes
+                target_soft = target_soft.float().cuda() # as custom ce uses probability vectors
 
                 # now that we are taking log of human guesses, must use smoothing. 
                 # One guess has about 0.02 probability mass, so we can use laplace smoothing as follows:
@@ -160,8 +164,8 @@ class TrainManager(object):
 
                     # ordering as above. Gamma = 1 will give only human label. Gamma = 0 will give only teacher (classic KD)
                     teacher_term = (1-gamma_) * (T_t **2) * distillation_criterion(F.log_softmax(output / T_t, dim=1), 
-                                                                               F.softmax(teacher_output / T_t, dim=1))
-                    human_term = gamma * (T_h **2) * distillation_criterion(F.log_softmax(output / T_h, dim=1), 
+                                                                               F.softmax(teacher_outputs / T_t, dim=1))
+                    human_term = gamma_ * (T_h **2) * distillation_criterion(F.log_softmax(output / T_h, dim=1), 
                                                                          F.softmax(human_outputs / T_h, dim=1))
 
                     loss_KD = teacher_term + human_term
@@ -203,8 +207,8 @@ class TrainManager(object):
             acc = 0
             total_val_loss=0
             for (images,labels,_) in self.test_loader:
-                images = images.to(self.device)
-                labels = labels.to(self.device)
+                images = images.cuda()
+                labels = labels.cuda()
                 outputs = self.student(images)
                 loss_val= criterion(outputs, labels) 
                 total_val_loss+=loss_val.item()

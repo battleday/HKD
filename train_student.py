@@ -70,13 +70,14 @@ if __name__ == "__main__":
     # trained on human labels with a lambda of 0.2
     # student results will then be saved under their teacher's superdirectory
     
-    #teacher_name = args.teacher '_'.join(teacher_details[:-1]) # remove the lambda
     if 'shake26' in args.teacher:
          teacher_arch = 'shake26' # we need to extract teacher architecture for setup
     else:
         print('either no teacher, or something wrong with teacher input in train_student.py; teacher arch not specified')
 
     save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
+    if args.teacher_mode == 'specify':
+        save_path = save_path.replace('.','-')
     log_path = '{}/training_log.log'.format(save_path)
     print('saving model run in {} \n'.format(save_path))
 
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     if args.teacher == 'human' or args.teacher=='baseline': # if this is first model / no teacher
         teacher = {'name': args.teacher}
     else: # load previously trained teacher model
-        teacher = {'name':args.teacher, 'arch': teacher_arch, 'mode': arg.teacher_mode}
+        teacher = {'name':args.teacher, 'arch': teacher_arch, 'mode': args.teacher_mode}
         print('teacher is: {}'.format(teacher))
         teacher_model = load_best_model(teacher, args.master_outdir, cuda_option = args.cuda)
         teacher['model'] = teacher_model

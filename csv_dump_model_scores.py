@@ -1,10 +1,19 @@
 import os, sys
 import numpy as np
 import pickle
+import argparse
 from find_best_teacher import *
-script, master_dir = sys.argv
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Training KD Teachers Code')
+    parser.add_argument('-rd', '--result_dir', default='./data', type=str,  help='dataset directory')
+    args = parser.parse_args()
+    return args
 
+args = parse_arguments()
+print(args)
+
+master_dir = args.result_dir
 """Helper script, to be able to call functions in find_best_teacher module using simple
 command-line arguments"""
 print('scanning in dir: {}'.format(master_dir))

@@ -1,0 +1,19 @@
+{	
+	"python_script": "csv_dump_model_scores.py",
+
+	"test_mode": false,
+	"verbose": 2,
+	"mode": "multiprog",
+	"multiprog_batch_size": 1,
+        "environment": "torch-env",
+        "module": "anaconda3",
+
+	"argument_grid":
+		{
+"rd": ["/tigress/ruairidh/HKD"]},
+
+	"sbatch_args":
+	 	{    "minutes": 4,
+                    "n_gpus" : 0,
+                    "mem"    : 0}
+}
