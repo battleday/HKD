@@ -66,9 +66,12 @@ def load_best_model(teacher, master_path, cuda_option = False):
     else:
         print('teacher is: {0}'.format(teacher['name']))
         #make sure best model is up to date at time of load
-        teacher_path = '{0}/{1}_{2}/best_teacher.pth.tar'.format(master_path, 
-                                                             teacher['name'].replace('_','/'),
-                                                             teacher['args'])
+        if teacher['mode'] == 'automatic':
+            teacher_path = '{0}/{1}/best_teacher.pth.tar'.format(master_path, 
+                                                             teacher['name'].replace('_','/'))
+        else:
+            print('loading specific teacher')
+            teacher_path = '{0}/{1}'.format(master_path, teacher['name'])
 
         #generate probabilities under that model
         teacher = load_teacher_model(teacher_path, teacher['arch'], cuda_option)

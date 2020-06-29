@@ -28,16 +28,18 @@ def load_checkpoint(model, checkpoint_path):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
-    parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
-    parser.add_argument('--teacher', default='human', type=str, help='teacher name')
+    parser.add_argument('--master_outdir', default='', type=str, help='directory to save model results')
+    parser.add_argument('--teacher', default='human', type=str, help='teacher name; usually compound')
+    parser.add_argument('--teacher_mode', default='automatic', type=str, help='either give the general teacher directory\
+    and leave find_best_teacher.py to identify best teacher, or give an exact teacher')
     parser.add_argument('--student', default='resnet8', type=str, help='student name')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
     parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
 
     parser.add_argument('--temperature_t', default=1.0, type=float,  help='student teacher temperature')
     parser.add_argument('--temperature_h', default=1.0, type=float,  help='student human temperature')
-    parser.add_argument('--lambda_', default=0.5, type=float,  help='weighted average')
-    parser.add_argument('--gamma_', default=0.0, type=float,  help='weighted average')
+    parser.add_argument('--lambda_', default=0.5, type=float,  help='weights hard and soft losses')
+    parser.add_argument('--gamma_', default=0.0, type=float,  help='weights components of soft loss')
     parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
 
     parser.add_argument('--epochs', default=500, type=int,  help='number of total epochs to run')
@@ -49,7 +51,7 @@ def parse_arguments():
     
     parser.add_argument('--cuda', default=False, type=str2bool, help='whether or not use cuda(train on GPU)')
     parser.add_argument('--dataset-dir', default='./data', type=str,  help='dataset directory')
-    parser.add_argument('--trial_id', default='', type=str,  help='id string')
+    #parser.add_argument('--trial_id', default='', type=str,  help='id string')
     
     args = parser.parse_args()
     return args
@@ -59,26 +61,27 @@ if __name__ == "__main__":
     args = parse_arguments()
     print(args)
 
-    # prepare paths and log
-    # student results will be saved under their teacher's superdirectory
-    teacher_details = args.teacher.split('_')
-    teacher_name = '_'.join(teacher_details[:-1])
+    ### Step 1: prepare paths and log
+
+    # if training first teachers, teacher name will be simple ('human' or 'baseline')
+    # if training students, teacher name will be a compound
+    # name that gives the teacher's identity. For example, human_shake26_0.2 means a shake-shake network
+    # trained on human labels with a lambda of 0.2
+    # student results will then be saved under their teacher's superdirectory
+    
+    #teacher_name = args.teacher '_'.join(teacher_details[:-1]) # remove the lambda
     if 'shake26' in args.teacher:
-        teacher_arch = 'shake26'
-    elif 'resnet8' in args.teacher:
-        teacher_arch = 'resnet8'
+         teacher_arch = 'shake26' # we need to extract teacher architecture for setup
     else:
-        print('something wrong with teacher input in train_student.py')
-    teacher_args = teacher_details[-1]
+        print('something wrong with teacher input in train_student.py; teacher arch not specified')
 
-
-    save_path = '{}/{}_{}/{}'.format(args.master_outdir, teacher_name, teacher_args, args.student)
+    save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
     log_path = '{}/training_log.log'.format(save_path)
     print('saving model run in {} \n'.format(save_path))
 
     if not os.path.exists(save_path):
-            print('making new dirs')
-            os.makedirs(save_path)
+        print('making new dirs')
+        os.makedirs(save_path)
 
     logs = open(log_path, 'a')
 
@@ -103,7 +106,7 @@ if __name__ == "__main__":
                 'momentum': args.momentum,
                 'weight_decay': args.weight_decay,
                 'device': 'cuda' if args.cuda else 'cpu',
-                'trial_id': args.trial_id,
+                #'trial_id': args.trial_id,
                 'batch_size': args.batch_size,
                 'distil_fn': args.distil_fn,
                 'lambda_': args.lambda_,
@@ -117,13 +120,14 @@ if __name__ == "__main__":
 
     # below will be dict with teacher name and probs for CIFAR10 validation subset
         
-    teacher = {'name':teacher_name, 'arch': teacher_arch, 'args': teacher_args}
+    teacher = {'name':args.teacher, 'arch': teacher_arch, 'mode': arg.teacher_mode}
     print('teacher is: {}'.format(teacher))
     teacher_model = load_best_model(teacher, args.master_outdir, cuda_option = args.cuda)
     teacher['model'] = teacher_model
+
     # unique identifier
-    student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(args.student, 
-                                args.distil_fn, args.temperature_h, args.temperature_t, args.lambda_, args.gamma_, args.iter)
+    student_name = 'student_{0}_distil_fn_{1}_temperature_h_{2}_temperature_t_{3}_lambda_{4}_gamma_{5}_iter_{6}_best.pth.tar'.format(
+        args.student, args.distil_fn, args.temperature_h, args.temperature_t, args.lambda_, args.gamma_, args.iter)
 
     # where to dump final model
     train_config['outfile'] = '{}/{}'.format(save_path, student_name)

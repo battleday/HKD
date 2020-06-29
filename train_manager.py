@@ -14,32 +14,17 @@ import numpy as np
 ### This script contains the main object class for training and optimization: TrainManager.
 #-----------------------------------
 # Helper functions
-def index_probabilities(teacherProbs, batch_idx):
-    """This function should batch the teacher probabilities for the L2 loss
-    using the torch backend.
 
-    Inputs
-    teacherProbs: numpy array(10000 x 10); model's output probs for validation set.
-    batch_idx: torch object: indices of images in batch being trained.
-
-    Outputs
-    teacherProbsBatched: torch object, teacher model output probabilities for batch
-    """
-    print('Not tested yet.')
-    teacherProbsBatched = teacherProbs[batch_idx.to(self.device).long()]
-    return teacherProbsBatched
-
-def custom_ce(input, target, reduction):
-    """Important: check this is the right ordering and where log applied.
-    target: distillation target. Should be given as probabilities.
-    input: model guess. Should be given as log probabilities."""
+def custom_ce(target, input, reduction):
+    """This is a custom cross-entropy function, as pytorch indexes into a one-hot for 
+    its cross-entropy loss.Expects target to be probabilities,
+    input to already be log probabilities."""
     output = - torch.sum( target * input, dim=1)
     if reduction == 'mean':
         return torch.mean(output)
 
 class CEDivLoss(l._Loss):
     """Custom loss class for cross-entropy between soft targets and output vectors.
-
     Input: targets (distillation targets) as probabilities, input (model outputs) as log probabilities
     """
     __constants__ = ['reduction']
@@ -53,11 +38,13 @@ class CEDivLoss(l._Loss):
 #-----------------------------------
 # Main object class
 class TrainManager(object):
-    """TrainManager class. Will create environment to train and save a student network.
+    """TrainManager class. Defines environment to train and save a student network.
 
-    Inputs (input through train_student.py)
+    Called by train_student.py
+
+    Inputs 
     student: torch model, to be trained
-    teacher: dict, containing name (str) and probs: numpy array(10000 x 10); model's output probs for validation set.
+    teacher: dict, containing name (str) and model (pytorch)
     train_loader: ? type, CIFAR10 validation subset, already batched. From dataloader module
     test_loader: ? type, CIFAR10 training subset, already batched. From dataloader module
     train_config: dictionary, with parameters for training
@@ -85,6 +72,7 @@ class TrainManager(object):
         
         self.train_loader = train_loader
         self.test_loader = test_loader
+
         # set up optimizer
         self.optimizer = optim.SGD(self.student.parameters(),
                                    lr=self.config['learning_rate'],
@@ -107,70 +95,71 @@ class TrainManager(object):
         validation_losses=[]
         training_losses=[]
         best_acc = 0
-        # L1 loss criterion
+
+        # Standard loss criterion ("L1"; i.e., for error with one-hots)
         criterion = nn.CrossEntropyLoss()
 
-        # L2 loss criterion
-        if self.config['distil_fn'] == 'CE':
+        # Distillation loss criterion ("L2")
+        if self.config['distil_fn'] == 'CE': # if cross-entropy
             print('CE model')
             distillation_criterion = CEDivLoss()
-        else:
+        else: # if KL divergence
             print('{} model'.format(self.config['distil_fn']))
             distillation_criterion = nn.KLDivLoss()
 
         print('Starting student training, no = {} >>>>>>>>>>>>>'.format(trial_id))
 
         for epoch in range(epochs):
-            # initialize torch model
+
+            # initialize student model
             self.student.train()
 
             # loop over batches in training set (CIFAR10 validation set)
             for batch_idx, (data, target_hard, target_soft) in enumerate(self.train_loader):
+                # data are image pixels, target_hard is one-hot, target_soft is human probabilities.
+                # N.B. it is imperative that entries of teacher_soft are probabilities
 
                 total_loss = 0
-                total_loss_SL = 0
-                total_loss_KD = 0
+                total_loss_SL = 0 # standard loss
+                total_loss_KD = 0 # knowledge distillation loss
                 
                 # reset gradients
                 self.optimizer.zero_grad()
 
                 # organize and type data
                 data = data.to(self.device).float()
-                target_hard = target_hard.to(self.device).long() # may need this to survive
-                target_soft = target_soft.to(self.device).float() # may need this to survive
+                target_hard = target_hard.to(self.device).long() # as torch cross-entropy loss indexes
+                target_soft = target_soft.to(self.device).float() # as custom ce uses probability vectors
                 output = self.student(data)
 
                 # data loss
                 loss_SL = criterion(output, target_hard)
                 
-                # Knowledge Distillation loss
-                # return teacher targets by indexing into teacherProbs with batch_idx
+                # Knowledge Distillation loss; NB, have tried to correct
                 if self.teacher_name == 'human':
-                    # should only be the case if learning from human labels, where teacherProbs is None
-                    teacher_outputs = target_soft
+                    # should only be the case if learning from human labels
+                    teacher_outputs = torch.log(target_soft)
+                    # first argument is target and should be probability. Second argument is model output
+                    # and should be log probability
+                    loss_KD = (T_h ** 2) * distillation_criterion(F.softmax(teacher_outputs / T_h, dim=1),
+                                                 F.log_softmax(output / T_h, dim=1))
                 elif self.teacher_name == 'baseline':
+                    # only the case for training the first teacher
                     teacher_outputs = None
-                else:
-                    # IMPORTANT: CHECK THESE ARE PROBABILITIES: not here, but converted below
-                    teacher_outputs = self.teacher_model(data)
-
-                # if only training baseline teacher, use loss_SL (L1 loss) only
-                if self.teacher_name == 'baseline':
                     loss_KD = loss_SL
-                # i.e., if only using human labels for loss
-                elif gamma_ == 1.0:
-                    loss_KD = T_h * T_h * distillation_criterion(F.log_softmax(output / T_h, dim=1),
-                                                 F.softmax(teacher_outputs / T_h, dim=1))
-                # i.e., if only using teacher labels for loss
-                elif gamma_ == 0.0:
-                    loss_KD = T_t * T_t * distillation_criterion(F.log_softmax(output / T_t, dim=1),
-                                                 F.softmax(teacher_outputs / T_t, dim=1))
-                # if using both human and teacher
                 else:
-                    # convex combination of teacher and human label loss
-                    loss_KD = T_t * T_t * (1-gamma_)*distillation_criterion(F.log_softmax(output / T_t, dim=1),
-                                                 F.softmax(teacher_outputs / T_t, dim=1)) + T_h * T_h * gamma_ * distillation_criterion(F.log_softmax(output / T_h, dim=1),
-                                                 F.softmax(target_soft / T_h, dim=1))
+                    # this is for training students, where teacher name will be a conjunction.
+                    teacher_outputs = self.teacher_model(data) # should be logits
+                    human_outputs = torch.log(target_soft) # convert to log probabilities
+
+                    # ordering as above. Gamma = 1 will give only human label. Gamma = 0 will give only teacher (classic KD)
+                    teacher_term = (1-gamma_) * (T_t **2) * distillation_criterion(F.softmax(teacher_output / T_t, dim=1),
+                                                 F.log_softmax(output / T_t, dim=1))
+                    human_term = gamma * (T_h **2) * distillation_criterion(F.softmax(human_outputs / T_h, dim=1),
+                                                 F.log_softmax(output / T_h, dim=1))
+
+                    loss_KD = teacher_term + human_term
+
                 # total loss
                 loss = (1 - lambda_) * loss_SL + lambda_ * loss_KD
                 total_loss += loss
@@ -200,6 +189,7 @@ class TrainManager(object):
     
     def validate(self, step=0):
         self.student.eval()
+        # as we are only doing validation loss on hard labels, can use inbuilt loss function
         criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
             correct = 0
@@ -223,7 +213,7 @@ class TrainManager(object):
             return acc, total_val_loss
     
     def save(self, epoch, name, training_losses, validation_losses):
-        trial_id = self.config['trial_id']
+        #trial_id = self.config['trial_id']
         """will save model and parameters in path <name>"""
         torch.save({
                 'model_state_dict': self.student.state_dict(),
