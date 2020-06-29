@@ -1,5 +1,4 @@
 import os
-# import nni
 import copy
 import pickle
 import torch
@@ -8,6 +7,9 @@ from data_loader import get_cifar
 from find_best_teacher import *
 from train_manager import TrainManager
 from model_factory import create_cnn_model, is_resnet
+
+### This file deals with all external details to algorithm, then invokes
+### train_manager.py with loaded models, parameters, and paths.
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -28,31 +30,30 @@ def load_checkpoint(model, checkpoint_path):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
-    parser.add_argument('--master_outdir', default='', type=str, help='directory to save model results')
-    parser.add_argument('--teacher', default='human', type=str, help='teacher name; usually compound')
-    parser.add_argument('--teacher_mode', default='automatic', type=str, help='either give the general teacher directory\
+    parser.add_argument('-ma', '--master_outdir', required=True, type=str, help='directory to save model results')
+    parser.add_argument('-t', '--teacher', default='human', type=str, help='teacher name; usually compound')
+    parser.add_argument('-tm', '--teacher_mode', default='automatic', type=str, help='either give the general teacher directory\
     and leave find_best_teacher.py to identify best teacher, or give an exact teacher')
-    parser.add_argument('--student', default='resnet8', type=str, help='student name')
-    parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
-    parser.add_argument('--iter', default=0, type=int, help='run # with same parameters')
+    parser.add_argument('-s', '--student', default='resnet8', type=str, help='student name')
+    parser.add_argument('-ms', '--manual_seed', default=0, type=int, help='manual seed')
+    parser.add_argument('-i', '--iter', default=0, type=int, help='run # with same parameters')
 
-    parser.add_argument('--temperature_t', default=1.0, type=float,  help='student teacher temperature')
-    parser.add_argument('--temperature_h', default=1.0, type=float,  help='student human temperature')
-    parser.add_argument('--lambda_', default=0.5, type=float,  help='weights hard and soft losses')
-    parser.add_argument('--gamma_', default=0.0, type=float,  help='weights components of soft loss')
-    parser.add_argument('--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
+    parser.add_argument('-th', '--temperature_t', default=1.0, type=float,  help='student teacher temperature')
+    parser.add_argument('-tt', '--temperature_h', default=1.0, type=float,  help='student human temperature')
+    parser.add_argument('-l', '--lambda_', default=0.5, type=float,  help='weights hard and soft losses')
+    parser.add_argument('-g', '--gamma_', default=0.0, type=float,  help='weights components of soft loss')
+    parser.add_argument('-d', '--distil_fn', default='KD', type=str,  help='for distillation loss (KD or CE)')
 
-    parser.add_argument('--epochs', default=500, type=int,  help='number of total epochs to run')
-    parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
-    parser.add_argument('--batch-size', default=128, type=int, help='batch_size')
-    parser.add_argument('--learning-rate', default=0.1, type=float, help='initial learning rate')
-    parser.add_argument('--momentum', default=0.9, type=float,  help='SGD momentum')
-    parser.add_argument('--weight-decay', default=1e-4, type=float, help='SGD weight decay (default: 1e-4)')
+    parser.add_argument('-e', '--epochs', default=500, type=int,  help='number of total epochs to run')
+    parser.add_argument('-d', '--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
+    parser.add_argument('-b', '--batch-size', default=128, type=int, help='batch_size')
+    parser.add_argument('-lr', '--learning-rate', default=0.1, type=float, help='initial learning rate')
+    parser.add_argument('-mo', '--momentum', default=0.9, type=float,  help='SGD momentum')
+    parser.add_argument('-wd', '--weight-decay', default=1e-4, type=float, help='SGD weight decay (default: 1e-4)')
     
-    parser.add_argument('--cuda', default=False, type=str2bool, help='whether or not use cuda(train on GPU)')
-    parser.add_argument('--dataset-dir', default='./data', type=str,  help='dataset directory')
-    #parser.add_argument('--trial_id', default='', type=str,  help='id string')
-    
+    parser.add_argument('-cu', '--cuda', default=False, type=str2bool, help='whether or not use cuda(train on GPU)')
+    parser.add_argument('-dd', '--dataset-dir', default='./data', type=str,  help='dataset directory')
+
     args = parser.parse_args()
     return args
 

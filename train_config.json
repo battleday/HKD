@@ -1,0 +1,26 @@
+{	
+	"python_script": "train_student.py",
+
+	"test_mode": false,
+	"verbose": 2,
+	"mode": "multiprog",
+	"multiprog_batch_size": 50,
+        "environment": "HKD",
+        "module": "anaconda3",
+
+	"argument_grid":
+		{
+"ma": ["/tigress/ruairidh/HKD"],
+"t": ["human", "baseline"],
+"i": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+"r": ["/tigress/ruairidh/cogsci_2020_all/combined/results"],
+"l": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+"d": ["CE", "KD"],
+"dd": ["./data"]
+},
+
+	"sbatch_args":
+	 	{    "minutes": 4,
+                    "n_gpus" : 1,
+                    "mem"    : 0}
+}
