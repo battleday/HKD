@@ -32,8 +32,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Training KD Teachers Code')
     parser.add_argument('-ma', '--master_outdir', required=True, type=str, help='directory to save model results')
     parser.add_argument('-t', '--teacher', default='human', type=str, help='teacher name; usually compound')
-    parser.add_argument('-tm', '--teacher_mode', default='automatic', type=str, help='either give the general teacher directory\
-    and leave find_best_teacher.py to identify best teacher, or give an exact teacher')
+    parser.add_argument('-tm', '--teacher_mode', default='specific', type=str, help='specific or automatic. Only specific working')
     parser.add_argument('-s', '--student', default='resnet8', type=str, help='student name')
     parser.add_argument('-ms', '--manual_seed', default=0, type=int, help='manual seed')
     parser.add_argument('-i', '--iter', default=0, type=int, help='run # with same parameters')
@@ -76,7 +75,7 @@ if __name__ == "__main__":
         print('either no teacher, or something wrong with teacher input in train_student.py; teacher arch not specified')
 
     save_path = '{}/{}/{}'.format(args.master_outdir, args.teacher, args.student)
-    if args.teacher_mode == 'specify':
+    if args.teacher_mode == 'specific':
         save_path = save_path.replace('.','-')
     log_path = '{}/training_log.log'.format(save_path)
     print('saving model run in {} \n'.format(save_path))

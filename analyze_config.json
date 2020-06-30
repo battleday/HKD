@@ -10,7 +10,8 @@
 
 	"argument_grid":
 		{
-"rd": ["/tigress/ruairidh/HKD"]},
+"rd": ["/tigress/ruairidh/HKD/test/"]
+},
 
 	"sbatch_args":
 	 	{    "minutes": 4,

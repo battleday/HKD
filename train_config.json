@@ -4,19 +4,19 @@
 	"test_mode": false,
 	"verbose": 2,
 	"mode": "multiprog",
-	"multiprog_batch_size": 50,
-        "environment": "HKD",
+	"multiprog_batch_size": 4,
+        "environment": "torch-env",
         "module": "anaconda3",
 
 	"argument_grid":
 		{
-"ma": ["/tigress/ruairidh/HKD"],
-"t": ["human", "baseline"],
-"i": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-"r": ["/tigress/ruairidh/cogsci_2020_all/combined/results"],
-"l": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+"ma": ["/tigress/ruairidh/HKD/test"],
+"t": ["human", "baseline", "/human/shake26/student_shake26_distil_fn_CE_temperature_h_1.0_temperature_t_1.0_lambda_0.5_gamma_0.0_iter_0_best.pth.tar"],
+"i": [0, 1],
+"l": [0.2, 0.4],
 "d": ["CE", "KD"],
-"dd": ["./data"]
+"dd": ["./data"],
+"e": [2]
 },
 
 	"sbatch_args":

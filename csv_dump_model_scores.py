@@ -5,8 +5,8 @@ import argparse
 from find_best_teacher import *
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Training KD Teachers Code')
-    parser.add_argument('-rd', '--result_dir', default='./data', type=str,  help='dataset directory')
+    parser = argparse.ArgumentParser(description='Basic evaluation of model results')
+    parser.add_argument('-rd', '--result_dir', required=True, type=str,  help='dataset directory')
     args = parser.parse_args()
     return args
 

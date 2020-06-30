@@ -160,7 +160,7 @@ class TrainManager(object):
                 else:
                     # this is for training students, where teacher name will be a conjunction.
                     teacher_outputs = self.teacher_model(data) # should be logits
-                    human_outputs = torch.log((target_soft + 0.02) / 1.2) # smooth and convert to log probabilities
+                    human_outputs = torch.log(target_soft)
 
                     # ordering as above. Gamma = 1 will give only human label. Gamma = 0 will give only teacher (classic KD)
                     teacher_term = (1-gamma_) * (T_t **2) * distillation_criterion(F.log_softmax(output / T_t, dim=1), 

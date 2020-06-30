@@ -30,8 +30,7 @@ def load_checkpoint(model, checkpoint_path):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Evaluating student generalization Code')
-    parser.add_argument('--master_outdir', default='', type=str, help='model dump dir')
-    parser.add_argument('--student_name', default='resnet8', type=str, help='student name')
+    parser.add_argument('-mo', '--master_outdir', required=True, type=str, help='model dump dir')
     parser.add_argument('--manual_seed', default=0, type=int, help='manual seed')
 
     parser.add_argument('--dataset', default='cifar10', type=str, help='dataset. can be either cifar10 or cifar100')
@@ -77,39 +76,45 @@ if __name__ == "__main__":
                 'validate': 'index',
                 'cinic': False
             }
-    student_path = '{}/{}'.format(args.master_outdir, args.student_name)
-    if os.path.exists('{}_generalization.npy'.format(student_path[:-8])):
-       print('existing model found')
-       exit()    
-    print('student path is: {}'.format(student_path))
-    # create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
-    student_model = load_teacher_model(student_path, 'resnet8', dataset, cuda_option=args.cuda)
-
-    # where to dump final model
+    students = os.listdir(args.master_outdir)
+    for student_name in students:
+        student_path = '{}/{}'.format(args.master_outdir, student_name)
+        if os.path.exists('{}_generalization.npy'.format(student_path[:-8])):
+           print('existing model found')
+           exit()    
+        print('student path is: {}'.format(student_path))
+        # create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
+        try:
+            student_model = load_teacher_model(student_path, 'resnet8', dataset, cuda_option=args.cuda)
+        except Exception as e:
+            print(e)
+            continue
+        # where to dump final model
+        
+        print("---------- Evaluating Student -------")
+        student_eval_cifar = EvalManager(student_model, test_loader=test_loader_cifar,
+                                         eval_config=eval_config)
     
-    print("---------- Evaluating Student -------")
-    student_eval_cifar = EvalManager(student_model, test_loader=test_loader_cifar,
-                                     eval_config=eval_config)
-
-    best_valacc1, best_valloss1 = student_eval_cifar.validate()
-
-    print('valacc cifar: {}, vallos cifar: {}'.format(best_valacc1, best_valloss1))
-
-    eval_config['cinic'] = True
-
-    student_eval_cinic = EvalManager(student_model, test_loader=test_loader_cinic,
-                                     eval_config=eval_config)
-
-    best_valacc2, best_valloss2 = student_eval_cinic.validate()
-
-    print('valacc cinic: {}, vallos cinic: {}'.format(best_valacc2, best_valloss2))
-
-    student_eval_imagenet = EvalManager(student_model, 
-                test_loader=test_loader_imagenet_far, eval_config=eval_config)
-
-    best_valacc3, best_valloss3 = student_eval_imagenet.validate()
-
-    print('valacc imagenet: {}, vallos imagenet: {}'.format(best_valacc3, best_valloss3))
-    results = np.array([[best_valacc1, best_valacc2, best_valacc3],[best_valloss1, best_valloss2, best_valloss3]])
-    np.save('{}_generalization.npy'.format(student_path[:-8]), results)    
-
+        best_valacc1, best_valloss1 = student_eval_cifar.validate()
+    
+        print('valacc cifar: {}, vallos cifar: {}'.format(best_valacc1, best_valloss1))
+    
+        eval_config['cinic'] = True
+    
+        student_eval_cinic = EvalManager(student_model, test_loader=test_loader_cinic,
+                                         eval_config=eval_config)
+    
+        best_valacc2, best_valloss2 = student_eval_cinic.validate()
+    
+        print('valacc cinic: {}, vallos cinic: {}'.format(best_valacc2, best_valloss2))
+    
+        student_eval_imagenet = EvalManager(student_model, 
+                    test_loader=test_loader_imagenet_far, eval_config=eval_config)
+    
+        best_valacc3, best_valloss3 = student_eval_imagenet.validate()
+    
+        print('valacc imagenet: {}, vallos imagenet: {}'.format(best_valacc3, best_valloss3))
+        results = np.array([[best_valacc1, best_valacc2, best_valacc3],[best_valloss1, best_valloss2, best_valloss3]])
+        np.save('{}_generalization.npy'.format(student_path[:-8]), results)    
+    
+    
