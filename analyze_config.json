@@ -4,13 +4,13 @@
 	"test_mode": false,
 	"verbose": 2,
 	"mode": "multiprog",
-	"multiprog_batch_size": 1,
+	"multiprog_batch_size": 2,
         "environment": "torch-env",
         "module": "anaconda3",
 
 	"argument_grid":
 		{
-"rd": ["/tigress/ruairidh/HKD/test/"]
+"rd": ["/tigress/ruairidh/HKD/test/human/shake26/"]
 },
 
 	"sbatch_args":

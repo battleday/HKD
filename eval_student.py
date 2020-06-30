@@ -61,14 +61,6 @@ if __name__ == "__main__":
     else:
         print('cifar10 not loaded!')
 
-    # dataloaders for training paradigm --- do all three for generalization
-    _, test_loader_cifar = get_cifar(num_classes, batch_size=args.batch_size, 
-                                     crop=True)
-    _, test_loader_imagenet_far = get_imagenet(num_classes, 
-                                  batch_size=args.batch_size, crop=True) 
-
-    _, test_loader_cinic = get_cinic(num_classes, 
-                                  batch_size=args.batch_size, crop=True) 
     # prepare train_config, to be passed into TrainManager class
     eval_config = {
                 'device': 'cuda' if args.cuda else 'cpu',
@@ -77,11 +69,12 @@ if __name__ == "__main__":
                 'cinic': False
             }
     students = os.listdir(args.master_outdir)
+
     for student_name in students:
         student_path = '{}/{}'.format(args.master_outdir, student_name)
         if os.path.exists('{}_generalization.npy'.format(student_path[:-8])):
            print('existing model found')
-           exit()    
+           continue    
         print('student path is: {}'.format(student_path))
         # create student model for CIFAR10; usually shake26 for initial student and resnet8 thereafter.
         try:
@@ -89,7 +82,16 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
             continue
+
         # where to dump final model
+        # dataloaders for training paradigm --- do all three for generalization
+        _, test_loader_cifar = get_cifar(num_classes, batch_size=args.batch_size, 
+                                     crop=True)
+        _, test_loader_imagenet_far = get_imagenet(num_classes, 
+                                  batch_size=args.batch_size, crop=True) 
+
+        _, test_loader_cinic = get_cinic(num_classes, 
+                                  batch_size=args.batch_size, crop=True) 
         
         print("---------- Evaluating Student -------")
         student_eval_cifar = EvalManager(student_model, test_loader=test_loader_cifar,
@@ -117,4 +119,10 @@ if __name__ == "__main__":
         results = np.array([[best_valacc1, best_valacc2, best_valacc3],[best_valloss1, best_valloss2, best_valloss3]])
         np.save('{}_generalization.npy'.format(student_path[:-8]), results)    
     
+        student_eval_cifar = None
+        student_eval_cinic = None
+        student_eval_imagenet = None
+        test_loader_cifar = None
+        test_loader_cinic = None
+        test_loader_imagenet = None
     

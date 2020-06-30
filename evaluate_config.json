@@ -4,7 +4,7 @@
 	"test_mode": false,
 	"verbose": 2,
 	"mode": "multiprog",
-	"multiprog_batch_size": 1,
+	"multiprog_batch_size": 2,
         "environment": "torch-env",
         "module": "anaconda3",
 
@@ -16,5 +16,5 @@
 	"sbatch_args":
 	 	{    "minutes": 20,
                     "n_gpus" : 1,
-                    "mem"    : 0}
+                    "mem"    : 16000}
 }
