@@ -3,16 +3,28 @@ Human Knowledge Distillation
 ---
 
 ## TL;DR
-Run the following command to launch a gridsearch:
+Run the following command to launch a training gridsearch:
+`module load anaconda3`
+`conda activate torch-env` 
+`python slurm_jobber.py -c train_config.json`
 
-`bash run_model_HKD_outer.sh`
+Run the following command to launch an analysis gridsearch:
+`module load anaconda3`
+`conda activate torch-env` 
+`python slurm_jobber.py -c analyze_config.json`
 
-Run the following commands to allocate yourself to a gpu on tigergpu and test functions:
+Run the following command to launch an evaluate gridsearch:
+`module load anaconda3`
+`conda activate torch-env` 
+`python slurm_jobber.py -c evaluate_config.json`
+
+Run the following commands to allocate yourself to a gpu and get ready to test .py files directly:
 
 `salloc -t 00:05:00 --gres=gpu:1`
-
-`sbatch --time=5 --job-name=test --output=test  --export=epochs=2,seed=0,teacher=human,student=shake26,distil=KD,lr=0.1,t_t=1,t_h=1,l=0.5,g=1,run=0,jobname=test run_model_HKD.sh`
-                     
+`module load anaconda3`
+`conda activate torch-env` 
+              
+N.B. A package file is included for you to create torch-env from; online .txt file in repo.
 ---
 
 ## Introduction
@@ -50,7 +62,7 @@ The student model is still trained using the cross-entropy loss between its outp
  
  L<sub>2h</sub> = T<sub>h</sub> * T<sub>h</sub> * Loss Function(log(p)<sub>i</sub>/T<sub>h</sub>, log(h)<sub>i</sub>/T<sub>h</sub>),
  
- where l<sub>i</sub> are the teacher output probabilities and h<sub>i</sub> are the human labels, and T<sub>t</sub> and T<sub>h</sub> are the compression temperature and data temperature, respectively. Typically these inputs will all be converted into probabilities using a softmax function prior to comparison in the loss function. We use either cross-entropy and relative entropy (KL divergence) as our loss functions.
+ where l<sub>i</sub> are the teacher output probabilities and h<sub>i</sub> are the human labels, and T<sub>t</sub> and T<sub>h</sub> are the compression temperature and data temperature, respectively. The human labels and teacher outputs are all be converted into probabilities using a softmax function prior to comparison in the loss function. We use either cross-entropy and relative entropy (KL divergence) as our loss functions.
  
 The remaining parameters are related to the optimization process and data storage and loading.
  
@@ -59,82 +71,46 @@ The remaining parameters are related to the optimization process and data storag
  ## Files
  
  In this repo, the following files are used:
- 1. `train_manager.py` 
+ 1. `train_config.json`
  
- This module contains all the training code. It takes a student and teacher outputs, learning and optimization parameters, and directory pointers, and then trains the student and saves accordingly. The main object class is `TrainManager`, which takes as input a `student` pytorch model, `teacher`, a dict containing the teacher name and a numpy array of 10000 * 10 probabilities derived from a teacher network for all images in the validation subset of CIFAR10, `train_loader` and `test_loader`, derived from the data loader, and `train_config`. This last file should contain the following keys:
+ Contains gridsearch params for training; only file that needs editing (must change / add paths);
+ 2. `train_student.py` 
  
- 'epochs'---number of epochs to train for;
+The main runfile for training a student. Takes a number of command-line arguments, all specified in parse_args function. From this, it creates all directory structure, initializes the seed for torch, loads student and teacher models and creates the  final save path and logging files.
+
+3. `train_manager.py`
+The training algorithm, instatiated as a class. When called, the `train_manager.py` `TrainManager` `train` method will train the student and keep track of the training and validationi losses, and model state at the highest-scoring validation accuracy. After training, it will call the `save` method to dump the losses and best model state to 'outfile'.
+
+4. `find_best_teacher.py`
  
- 'learning_rate'---of student;
+Helper module to load teacher.
+
+5. `analyze_config.json`
+Contains gridsearch params to analyze all models in a particular folder. This will give their training and validation accuracies and losses on cifar10 and cifar10h. Currently does not analyze for cinic and imagenet far.
+
+6. `csv_dump_model_scores.py`
  
- 'momentum';
+ This takes a result directory, scrapes the model results, averages them across runs, and outputs a csv file in the same directory.
  
- 'weight_decay';
  
- 'device';
+ 7. Various dataloaders
  
- 'trial_id'---currently used to give unique string specifier;
- 
- 'batch_size';
- 
- 'distil_fn';
- 
- 'lambda_';
- 
- 'gamma_';
- 
- 'temperature_h';
- 
- 'temperature_t';
- 
- 'outfile'.
- 
- When called, the `train_manager.py` `TrainManager` `train` method will train the student and keep track of the training and validationi losses, and model state at the highest-scoring validation accuracy. After training, it will call the `save` method to dump the losses and best model state to 'outfile'.
-                                
- 2. `train_student.py`
- 
- The main runfile for training a student. Takes a number of command-line arguments, all specified at top of file. From this, it creates all directory structure, initializes the seed for torch, loads student model and teacherProbs, and creates the  final save path and logging files.
- 
- 3. `find_best_teacher.py`
- 
- Module to find best teacher within a specified subgroup.
- 
- 4. `print_model_scores.py`
- 
- If given argument of master directory, will print results of all models within it.
- 
- 5. `run_model_HKD.sh`
- 
- Intuitively, this script plays the role of the command-line user on the remote server.
- This should be called within an sbatch command via `run_model_HKD_outer.sh`. Loads correct modules (anaconda3) and environments (torch-env: see here (https://pytorch.org/get-started/locally/; via conda)) on server, and creates correct master working directory. Takes a series of bash arguments from `run_model_HKD_outer.sh`, and sets some others manually. Calls `train_student.py` with these arguments. The only thing that should be changed is the path for SDIR.
- 
- 6. `run_model_HDK_outer.sh`
- 
- This controls launching the sbatch jobs for different model parameters. Currently it is just a series of nested for loops in a bash script, but there is no reason one could not use a python script wrapping an os command instead.
- 
- 7. `data_loader.py`
- 
- The data loader module, originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/data_loader.py. Currently requires more commenting and documentation, and the CINIC-10 and ImageNetFar datasets added.
+ The data loader module, originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/data_loader.py, and adapted in separate files to load cinic and imagenet-far
  
  8. `model_factory.py`
  
  Originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/model_factory.py.
- 
- 9. `csv_dump_model_scores.py`
- 
- This takes a result directory, scrapes the model results, averages them across runs, and outputs a csv file in the same directory.
  
 ---
 ## Directories
 
 1. Data
 
-Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train10k_images.npy, test50k_images.npy,		train10k_labels.npy). Email to receive these.
+Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train10k_images.npy, test50k_images.npy,		train10k_labels.npy, etc). Email to receive these.
 
 2. Architectures
 
 Contains architectures from TAKD repo, and provides the backend to `model_factory.py`.
-
 
 
 ---
