@@ -90,17 +90,34 @@ Contains gridsearch params to analyze all models in a particular folder. This wi
 
 6. `csv_dump_model_scores.py`
  
- This takes a result directory, scrapes the model results, averages them across runs, and outputs a csv file in the same directory.
+This takes a directory of trained models, scrapes the model results, averages them across runs, and outputs a csv file in the same directory.
  
- 
- 7. Various dataloaders
+7. `evaluate_config.json`
+Contains gridsearch params to evaluate all models in a particular folder on cinic and imagenet far, and dump generalization results as npy file in the samed folder.
+
+8. `eval_student.py`
+Runfile for evaluation. Currently a bug where after successfully evaluating the first model in the folder, halts on test_loader error for second model.
+
+9. `eval_manager.py`
+Algorithm for evaluation. Working.
+
+10. Various dataloaders
  
  The data loader module, originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/data_loader.py, and adapted in separate files to load cinic and imagenet-far
  
- 8. `model_factory.py`
+12. `slurm_jobber.py`
+Python script to generate sbatch command. Add relevant configuration file with -c flag (see examples at top; https://github.com/jcpeterson/easy_slurm).
+
+13. `utils.py`, `return_args.py`
+Auxillary files for slurm_jobber.
+
+14. `model_factory.py`
  
- Originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/model_factory.py.
+Originally from here: https://github.com/imirzadeh/Teacher-Assistant-Knowledge-Distillation/blob/master/model_factory.py.
  
+15. `torch-env.txt`
+Dump of anaconda environment I use to run the above.
+
 ---
 ## Directories
 
@@ -111,6 +128,13 @@ Contains data files kept locally (test50k_labels.npy, cifar10h-probs.npy,		train
 2. Architectures
 
 Contains architectures from TAKD repo, and provides the backend to `model_factory.py`.
+
+3. Old
+Old scripts.
+
+4. Results
+Results from the pilot
+
 
 
 ---
